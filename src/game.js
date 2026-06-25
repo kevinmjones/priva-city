@@ -258,7 +258,7 @@ function createPlayer(scene) {
   body.generateTexture("player", 44, 72);
   body.destroy();
 
-  player = scene.physics.add.sprite(244, WORLD.floor - 90, "player");
+  player = scene.physics.add.sprite(120, WORLD.floor - 90, "player");
   player.setCollideWorldBounds(true);
   player.body.setSize(30, 64).setOffset(7, 8);
   player.setDragX(1800);
