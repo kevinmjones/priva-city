@@ -21,18 +21,31 @@
             </div>
           </div>
           <div class="meters">
-            <span id="timer">00:00</span>
-            <span id="code-slots">Code: -- -- --</span>
-            <span id="sigils">Sigils: 0/4</span>
+            <span><b>Time</b><span id="timer">00:00</span></span>
+            <span><b>Code</b><span id="code-slots">-- -- --</span></span>
+            <span><b>Sigils</b><span id="sigils">0/4</span></span>
           </div>
         </div>
         <aside id="quest-log" aria-live="polite">
           <h1>Main Quest</h1>
           <ol id="quest-list"></ol>
           <h2>Side Quest</h2>
-          <p>Find the four consent sigils hidden around Priva-city.</p>
+          <p id="side-quest">Find the four consent sigils hidden around Priva-city.</p>
         </aside>
-        <div id="hint">Move: WASD / arrows · Interact: E · Close: Esc</div>
+        <div id="hint" aria-live="polite">
+          <span id="promptText"></span>
+          <span id="controlHelp">Move <kbd>A</kbd><kbd>D</kbd> or arrows · Jump <kbd>Space</kbd> · Interact <kbd>E</kbd></span>
+        </div>
+        <div id="touch-controls" aria-label="Touch controls">
+          <div class="touch-pad">
+            <button type="button" data-touch="left" aria-label="Move left">←</button>
+            <button type="button" data-touch="right" aria-label="Move right">→</button>
+          </div>
+          <div class="touch-actions">
+            <button type="button" data-touch="jump" aria-label="Jump">↑</button>
+            <button type="button" data-touch="interact" aria-label="Interact">E</button>
+          </div>
+        </div>
       </section>
     </main>
 
