@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Priva-city</title>
+    <meta name="description" content="A playable privacy CTF prototype from OT Labs." />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  </head>
+  <body>
+    <main id="shell">
+      <section id="game-wrap" aria-label="Priva-city game">
+        <div id="game"></div>
+        <div id="hud">
+          <div class="brand">
+            <span class="mark"></span>
+            <div>
+              <strong>PRIVA-CITY</strong>
+              <span>Trust restoration protocol</span>
+            </div>
+          </div>
+          <div class="meters">
+            <span id="timer">00:00</span>
+            <span id="code-slots">Code: -- -- --</span>
+            <span id="sigils">Sigils: 0/4</span>
+          </div>
+        </div>
+        <aside id="quest-log" aria-live="polite">
+          <h1>Main Quest</h1>
+          <ol id="quest-list"></ol>
+          <h2>Side Quest</h2>
+          <p>Find the four consent sigils hidden around Priva-city.</p>
+        </aside>
+        <div id="hint">Move: WASD / arrows · Interact: E · Close: Esc</div>
+      </section>
+    </main>
+
+    <dialog id="modal">
+      <form method="dialog">
+        <button id="close-modal" value="cancel" aria-label="Close">×</button>
+      </form>
+      <div id="modal-body"></div>
+    </dialog>
+
+    <script src="src/game.js"></script>
+  </body>
+</html>

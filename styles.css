@@ -1,0 +1,321 @@
+:root {
+  color-scheme: dark;
+  --bg: #09110f;
+  --panel: rgba(9, 17, 15, 0.86);
+  --panel-strong: rgba(17, 29, 26, 0.96);
+  --line: rgba(151, 216, 190, 0.34);
+  --text: #edf7f1;
+  --muted: #9fb8ae;
+  --green: #69e0a3;
+  --amber: #ffd166;
+  --red: #ef6461;
+  --cyan: #63d7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 20%, rgba(91, 166, 137, 0.2), transparent 32%), var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#shell {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+#game-wrap {
+  position: relative;
+  width: min(100vw - 36px, calc((100vh - 36px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  min-width: 320px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #0f1917;
+  box-shadow: 0 22px 80px rgba(0, 0, 0, 0.44);
+}
+
+#game,
+#game canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  inset: 16px 16px auto 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.brand,
+.meters,
+#quest-log {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  min-width: 230px;
+}
+
+.brand strong,
+#quest-log h1,
+#quest-log h2 {
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.brand span:not(.mark) {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mark {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  position: relative;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.meters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.meters span {
+  white-space: nowrap;
+}
+
+#quest-log {
+  position: absolute;
+  right: 16px;
+  top: 78px;
+  width: min(320px, calc(100% - 32px));
+  padding: 14px;
+  pointer-events: none;
+}
+
+#quest-log h1,
+#quest-log h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--amber);
+}
+
+#quest-log h2 {
+  margin-top: 14px;
+  color: var(--cyan);
+}
+
+#quest-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+#quest-list li.done {
+  color: var(--green);
+  text-decoration: line-through;
+}
+
+#quest-log p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+#hint {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: calc(100% - 32px);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: rgba(5, 10, 9, 0.76);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+dialog {
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(720px, calc(100vh - 28px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  padding: 0;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+#close-modal {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#modal-body {
+  padding: 28px;
+}
+
+#modal-body h2 {
+  margin: 0 40px 10px 0;
+  font-size: 22px;
+}
+
+#modal-body p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.choices {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.choices button,
+.keypad button,
+.primary {
+  border: 1px solid var(--line);
+  background: #13241f;
+  color: var(--text);
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.choices button:hover,
+.keypad button:hover,
+.primary:hover {
+  border-color: var(--green);
+}
+
+.result {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--amber);
+  background: rgba(255, 209, 102, 0.08);
+  color: var(--text);
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.keypad button {
+  aspect-ratio: 2 / 1;
+  text-align: center;
+  font-size: 18px;
+}
+
+.code-readout {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--green);
+  font-size: 24px;
+  margin-top: 12px;
+}
+
+@media (max-width: 760px), (max-height: 560px) {
+  #shell {
+    padding: 0;
+  }
+
+  #game-wrap {
+    width: 100vw;
+    height: 100vh;
+    aspect-ratio: auto;
+    border: 0;
+  }
+
+  #hud {
+    inset: 8px 8px auto 8px;
+  }
+
+  .brand {
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .brand span:not(.mark) {
+    display: none;
+  }
+
+  .meters {
+    padding: 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  #quest-log {
+    top: auto;
+    bottom: 44px;
+    right: 8px;
+    width: min(300px, calc(100% - 16px));
+    padding: 10px;
+  }
+
+  #hint {
+    left: 8px;
+    bottom: 8px;
+    font-size: 11px;
+  }
+}
