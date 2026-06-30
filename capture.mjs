@@ -83,6 +83,18 @@ await shot("v2-mobile-390x844.png", 390, 844, async (p) => {
   await wait(p, 400);
 });
 
+// 5b. HUD legibility — 1440 desktop (acceptance criterion: quest panel legible at 1440)
+await shot("v2-hud-1440x810.png", 1440, 810, async (p) => {
+  await p.evaluate(() => { window.__priva.startGame(); window.__priva.game.bannerT = 0; });
+  await wait(p, 400);
+});
+
+// 5c. HUD legibility — mobile (acceptance criterion: scales on mobile)
+await shot("v2-hud-mobile-390x844.png", 390, 844, async (p) => {
+  await p.evaluate(() => { window.__priva.startGame(); window.__priva.game.bannerT = 0; });
+  await wait(p, 400);
+});
+
 // 6. Clean hero shot (facade + neon + kiosk + character) — no banner
 await shot("v2-hero-1440x810.png", 1440, 810, async (p) => {
   await p.evaluate(() => {
