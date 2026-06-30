@@ -105,7 +105,22 @@ kbd {
 .byline { margin-top: 18px; font-size: clamp(6px, 1.1vw, 9px); color: #5b6a93; }
 
 /* ---------- HUD ---------- */
-#hud { position: absolute; inset: 0; pointer-events: none; }
+/*
+ * #hud-vp is a 480×270 virtual viewport that mirrors the game canvas coordinate
+ * space. CSS transform: scale(--hud-scale) makes it match the canvas display
+ * size at every breakpoint, so font sizes and positions read correctly at 1440p
+ * and scale naturally down on mobile.
+ */
+#hud { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
+
+#hud-vp {
+  width: 480px;
+  height: 270px;
+  position: relative;
+  pointer-events: none;
+  transform: scale(var(--hud-scale, 1));
+  transform-origin: center center;
+}
 
 .hud-brand {
   position: absolute; top: 14px; left: 16px;
@@ -123,9 +138,9 @@ kbd {
 
 #questLog {
   position: absolute; top: 14px; right: 16px;
-  width: min(34vw, 280px);
+  width: 160px;
   background: var(--panel); border: 1px solid #1d2750;
-  border-radius: 4px; padding: 12px 14px;
+  border-radius: 4px; padding: 10px 12px;
 }
 #questLog h2 { font-size: 8px; color: var(--pink); letter-spacing: 1px; margin-bottom: 8px; }
 #questList { list-style: none; }
@@ -138,7 +153,7 @@ kbd {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
   pointer-events: auto; font-family: var(--mono); font-size: 7px;
   color: var(--cyan); background: var(--panel); border: 1px solid #1d2750;
-  border-radius: 4px; padding: 6px 10px; cursor: pointer;
+  border-radius: 4px; padding: 6px 10px; cursor: pointer; white-space: nowrap;
 }
 .mute.muted { color: #5b6a93; }
 
@@ -160,7 +175,7 @@ kbd {
 }
 
 /* ---------- TOUCH ---------- */
-#touch { position: absolute; inset: auto 0 0 0; bottom: 14px; display: none; justify-content: space-between; padding: 0 18px; pointer-events: none; }
+#touch { position: absolute; left: 0; right: 0; bottom: 14px; display: none; justify-content: space-between; padding: 0 18px; pointer-events: none; }
 #touch button {
   pointer-events: auto;
   width: 54px; height: 54px; margin: 0 6px;
@@ -172,6 +187,8 @@ kbd {
 @media (pointer: coarse) {
   #touch { display: flex; }
   #controlBar { display: none; }
+  .desktop-hint { display: none; }
+  .touch-hint { display: block; }
 }
 
 /* ---------- PUZZLE OVERLAY ---------- */
@@ -181,6 +198,7 @@ kbd {
 }
 .pz-card {
   width: min(92vw, 520px);
+  max-height: 88vh; overflow-y: auto;
   background: linear-gradient(180deg, #0d1330, #0a0f26);
   border: 1px solid var(--cyan);
   border-radius: 6px; padding: 22px 22px 20px;
@@ -218,6 +236,7 @@ kbd {
 }
 .pz-confirm { background: var(--cyan); color: var(--ink); box-shadow: 0 3px 0 #1c8aa6; flex: 1; }
 .pz-confirm:active { transform: translateY(2px); box-shadow: none; }
+.pz-confirm:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
 .pz-cancel { background: transparent; color: #8fa6cf; border: 1px solid #24305c; }
 .pz-feedback {
   margin-top: 12px; font-size: 7px; line-height: 1.9; color: var(--pink);
@@ -225,8 +244,61 @@ kbd {
 }
 .pz-feedback.show { opacity: 1; max-height: 80px; }
 
-@media (max-width: 600px) {
-  #questLog { width: 46vw; padding: 8px 10px; }
-  #questList li { font-size: 6px; }
+/* ---------- QUEST 2: multichoice ---------- */
+.pz-questions { margin-top: 14px; display: grid; gap: 12px; }
+.pz-question {
+  background: #09102a; border: 1px solid #1d2a4c; border-radius: 4px; padding: 10px 12px;
+}
+.pz-scenario { font-size: 7px; line-height: 1.9; color: #cfe1ff; margin-bottom: 8px; }
+.pz-options { display: grid; gap: 6px; }
+.pz-option {
+  font-family: var(--mono); font-size: 7px; text-align: left;
+  padding: 8px 12px; border-radius: 4px; cursor: pointer;
+  background: #0d1530; border: 1px solid #24305c; color: #8fa6cf;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.pz-option:hover { border-color: #3a4f8c; color: #cfe1ff; }
+.pz-option.selected { background: rgba(52,231,255,0.1); border-color: var(--cyan); color: var(--cyan); }
+
+/* ---------- QUEST 3: classify ---------- */
+.pz-records { margin-top: 14px; display: grid; gap: 6px; }
+.pz-record {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px;
+  background: #09102a; border: 1px solid #1d2a4c; border-radius: 4px; padding: 8px 10px;
+}
+.pz-rec-label { font-size: 7px; color: #cfe1ff; line-height: 1.6; }
+.pz-classify-btn {
+  font-family: var(--mono); font-size: 6px; padding: 6px 8px;
+  border-radius: 3px; cursor: pointer; border: 1px solid #24305c;
+  background: #0d1530; color: #6c7ba6; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.pz-keep.active  { background: rgba(93,255,155,0.12); border-color: var(--green); color: var(--green); }
+.pz-purge.active { background: rgba(255,77,141,0.12); border-color: var(--pink);  color: var(--pink);  }
+
+/* ---------- QUEST 4: sequence ---------- */
+.pz-sequence { margin-top: 14px; display: grid; gap: 8px; }
+.pz-seq-step {
+  display: grid; grid-template-columns: 28px 1fr; align-items: center; gap: 10px;
+  font-family: var(--mono); text-align: left; cursor: pointer;
+  background: #09102a; border: 1px solid #1d2a4c; border-radius: 4px; padding: 10px 12px;
+  color: #cfe1ff; transition: border-color 0.12s, background 0.12s;
+}
+.pz-seq-step:hover:not(.done) { border-color: #3a4f8c; }
+.pz-seq-step.done { background: rgba(52,231,255,0.07); border-color: var(--cyan); cursor: default; }
+.pz-seq-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: #1a2244; border: 1px solid #24305c;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: #5b6a93; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pz-seq-step.done .pz-seq-num { background: rgba(52,231,255,0.2); border-color: var(--cyan); color: var(--cyan); }
+.pz-seq-label { font-size: 7px; line-height: 1.6; }
+
+/* touch-hint default hidden; shown via @media (pointer: coarse) above */
+.touch-hint { display: none; }
+
+@media (max-width: 480px) {
+  /* On very small viewports, hide the brand subtitle to save space */
   .hud-brand span { display: none; }
 }

@@ -335,7 +335,10 @@ function makePzConfirm(label, checkFn) {
   const btn = document.createElement("button");
   btn.className = "pz-confirm";
   btn.textContent = label;
-  btn.onclick = () => { if (!checkFn()) sfx.error(); };
+  btn.onclick = () => {
+    if (checkFn()) closePuzzle(true);
+    else sfx.error();
+  };
   return btn;
 }
 

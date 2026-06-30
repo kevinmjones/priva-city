@@ -18,40 +18,43 @@
           <h1 class="logo">PRIVA<span>·</span>CITY</h1>
           <p class="tagline">Take back the night. Take back your data.</p>
           <button id="startBtn" class="cta">▶ START</button>
-          <p class="controls-hint">
+          <p class="controls-hint desktop-hint">
             Move <kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> &nbsp;·&nbsp;
             Jump <kbd>Space</kbd> &nbsp;·&nbsp; Interact <kbd>E</kbd>
           </p>
+          <p class="controls-hint touch-hint">Touch controls shown in-game</p>
           <p class="byline">A privacy CTF prototype · OT Labs</p>
         </div>
       </section>
 
-      <!-- IN-GAME HUD -->
+      <!-- IN-GAME HUD — #hud-vp is 480×270 virtual units, scaled by --hud-scale to match the canvas -->
       <div id="hud" class="hidden">
-        <div class="hud-brand">
-          <span class="hud-mark"></span>
-          <div><strong>PRIVA-CITY</strong><span>Data Broker District</span></div>
-        </div>
-        <aside id="questLog">
-          <h2>MAIN QUEST</h2>
-          <ul id="questList"></ul>
-          <div class="sigils">CONSENT SIGILS <b id="sigilCount">0/4</b></div>
-        </aside>
-        <button id="muteBtn" class="mute">♪ on</button>
-        <div id="interactPrompt"><kbd>E</kbd> Interact</div>
-        <div id="controlBar">
-          <span><kbd>A</kbd><kbd>D</kbd> Move</span>
-          <span><kbd>Space</kbd> Jump</span>
-          <span><kbd>E</kbd> Interact</span>
-        </div>
-        <div id="touch">
-          <div class="t-left">
-            <button id="btnLeft" aria-label="Left">‹</button>
-            <button id="btnRight" aria-label="Right">›</button>
+        <div id="hud-vp">
+          <div class="hud-brand">
+            <span class="hud-mark"></span>
+            <div><strong>PRIVA-CITY</strong><span>Data Broker District</span></div>
           </div>
-          <div class="t-right">
-            <button id="btnJump" aria-label="Jump">▲</button>
-            <button id="btnInteract" aria-label="Interact">E</button>
+          <aside id="questLog">
+            <h2>MAIN QUEST</h2>
+            <ul id="questList"></ul>
+            <div class="sigils">PRIVACY SIGILS <b id="sigilCount">0/4</b></div>
+          </aside>
+          <button id="muteBtn" class="mute">♪ on</button>
+          <div id="interactPrompt"><kbd>E</kbd> Interact</div>
+          <div id="controlBar">
+            <span><kbd>A</kbd><kbd>D</kbd> Move</span>
+            <span><kbd>Space</kbd> Jump</span>
+            <span><kbd>E</kbd> Interact</span>
+          </div>
+          <div id="touch">
+            <div class="t-left">
+              <button id="btnLeft" aria-label="Left">‹</button>
+              <button id="btnRight" aria-label="Right">›</button>
+            </div>
+            <div class="t-right">
+              <button id="btnJump" aria-label="Jump">▲</button>
+              <button id="btnInteract" aria-label="Interact">E</button>
+            </div>
           </div>
         </div>
       </div>
@@ -67,8 +70,8 @@
       <section id="winScreen" class="hidden">
         <div class="title-inner">
           <h1 class="logo win">DISTRICT<br />SECURED</h1>
-          <p class="tagline">The broker node is dark. Consent restored.</p>
-          <p class="byline">Phase 0 vertical slice · press <kbd>Enter</kbd> to replay</p>
+          <p class="tagline">All four quests complete. Privacy restored.</p>
+          <p class="byline">Phase 1 · 4 privacy quests · press <kbd>Enter</kbd> to replay</p>
         </div>
       </section>
     </div>
