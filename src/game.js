@@ -28,22 +28,22 @@ function buildAssets() {
   A.sky = art.buildSky(VW, VH);
   A.far = art.buildSkyline(WORLD_W * 0.5, 150, { palette: art.PAL.farTower, seed: 11, density: 0.5, litChance: 0.25, warm: false });
   A.mid = art.buildSkyline(WORLD_W * 0.7, 170, { palette: art.PAL.midTower, seed: 23, density: 0.6, litChance: 0.4, warm: true });
-  A.near = art.buildSkyline(WORLD_W, 190, { palette: art.PAL.nearWall, seed: 37, density: 0.55, litChance: 0.55, warm: true });
+  A.near = art.buildSkyline(WORLD_W, 200, { palette: art.PAL.nearWall, seed: 37, density: 0.55, litChance: 0.62, warm: true });
+  A.shops = art.buildShopRow(WORLD_W, 48);   // continuous lit street-level wall
+  A.fg = art.buildForeground(WORLD_W, 48);    // foreground furniture silhouettes
   A.street = art.buildStreet(WORLD_W, 60);
   A.lamp = art.buildLamp();
   A.fog = art.buildFog(VW, VH);
   A.kiosk = art.buildKiosk();
   const ch = art.buildCharacter();
-  A.char = ch.canvas; A.cfw = ch.fw; A.cfh = ch.fh; A.cframes = ch.frames;
+  A.char = ch.canvas; A.charSil = ch.silhouette; A.cfw = ch.fw; A.cfh = ch.fh; A.cframes = ch.frames;
 
   const fac = art.buildFacade(360, 150, 71, "TRUST HUB");
   A.facade = fac.canvas; A.facadeDoorX = fac.doorX;
   A.signHub = art.buildNeonSign("DATA BROKER", art.PAL.neonPink);
-  A.planter = art.buildPlanter(120);
 }
 
-// foreground planters (closest parallax layer) for depth
-const planters = [80, 460, 1320, 1760];
+const SHOP_H = 48, FG_H = 48;
 
 // ---- world entities (Phase 0 slice) ----
 const facadeX = 1080;
@@ -276,7 +276,9 @@ function render() {
   ctx.drawImage(A.sky, 0, 0);
   drawLayer(A.far, 0.18, VH - 150 - 12);
   drawLayer(A.mid, 0.38, VH - 170 + 4);
-  drawLayer(A.near, 0.62, VH - 190 + 18);
+  drawLayer(A.near, 0.62, VH - 200 + 18);
+  // continuous lit storefront wall behind the sidewalk (fills the dead band)
+  drawLayer(A.shops, 0.62, GROUND_Y - SHOP_H);
 
   const fx = facadeX - game.camX * 0.85;
   ctx.drawImage(A.facade, Math.round(fx), GROUND_Y - 150);
@@ -303,12 +305,9 @@ function render() {
     ctx.fillRect(Math.round(p.x - game.camX), Math.round(p.y), p.size, p.size);
   });
 
-  // foreground planters (parallax > 1, drawn in front for depth)
-  planters.forEach((lx) => {
-    const sxp = Math.round(lx - game.camX * 1.12);
-    if (sxp < -130 || sxp > VW + 10) return;
-    ctx.drawImage(A.planter, sxp, GROUND_Y - 2);
-  });
+  // closest parallax layer: foreground street-furniture silhouettes, streaking
+  // past faster than everything else for layered depth (Gestalt figure-ground)
+  drawLayer(A.fg, 1.18, VH - FG_H);
 
   // lighting pass
   const lc = lightBuf.ctx;
@@ -356,18 +355,27 @@ function vignette() {
   ctx.fillRect(0, 0, VW, VH);
 }
 
+const PLAYER_SCALE = 1.3;   // scale the avatar up so it reads as the focal element
 function drawPlayer() {
   const sx = (player.anim % A.cframes) * A.cfw;
   const px = Math.round(player.x - game.camX);
-  const py = Math.round(player.y);
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  const dw = A.cfw * PLAYER_SCALE, dh = A.cfh * PLAYER_SCALE;
+  const footY = Math.round(player.y) + A.cfh;   // ground contact (tracks jumps)
+  const top = footY - dh;
+  // ground contact shadow
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
   ctx.beginPath();
-  ctx.ellipse(px, GROUND_Y + 2, 8, 2.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(px, GROUND_Y + 2, 9, 2.5, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.save();
-  ctx.translate(px, py);
+  ctx.translate(px, top);
   if (player.face < 0) ctx.scale(-1, 1);
-  ctx.drawImage(A.char, sx, 0, A.cfw, A.cfh, -A.cfw / 2, 0, A.cfw, A.cfh);
+  // 1px dark outline (4-way) so the figure separates from the brick facade
+  const o = PLAYER_SCALE;
+  for (const [ox, oy] of [[-o, 0], [o, 0], [0, -o], [0, o]]) {
+    ctx.drawImage(A.charSil, sx, 0, A.cfw, A.cfh, -dw / 2 + ox, oy, dw, dh);
+  }
+  ctx.drawImage(A.char, sx, 0, A.cfw, A.cfh, -dw / 2, 0, dw, dh);
   ctx.restore();
 }
 
@@ -425,11 +433,13 @@ function drawTitle() {
   game.camX = (titleT * 0.3) % (WORLD_W - VW);
   drawLayer(A.far, 0.18, VH - 150 - 12);
   drawLayer(A.mid, 0.3, VH - 170 + 4);
-  drawLayer(A.near, 0.5, VH - 190 + 18);
+  drawLayer(A.near, 0.5, VH - 200 + 18);
+  drawLayer(A.shops, 0.5, GROUND_Y - SHOP_H);
   ctx.drawImage(A.street, -game.camX, GROUND_Y);
   const fx = facadeX - game.camX * 0.85;
   ctx.drawImage(A.facade, Math.round(fx), GROUND_Y - 150);
   ctx.drawImage(A.signHub, Math.round(fx + 110), GROUND_Y - 150 + 6);
+  drawLayer(A.fg, 1.0, VH - FG_H);
   const lc = lightBuf.ctx; lc.clearRect(0, 0, VW, VH);
   glow(lc, fx + 140, GROUND_Y - 138, 50, "rgba(255,77,141,0.5)");
   glow(lc, VW * 0.5, GROUND_Y - 30, 70, "rgba(52,231,255,0.14)");

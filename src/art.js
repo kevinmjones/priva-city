@@ -55,9 +55,19 @@ export const PAL = {
   street: ["#171a26", "#1d2130", "#12151f"],
   curb: ["#2b3040", "#373d52"],
   skin: ["#e7b58c", "#c98e64"],
-  hoodie: ["#2f6f6b", "#225350", "#3c8a85"],
+  hoodie: ["#2f8f86", "#236f68", "#4fd0c0"],
+  hoodieRim: "#7df6e4",
   pants: ["#2a2f45", "#1f2335"],
   hair: ["#2a211c", "#1c1612"],
+  outline: "#04050c",
+  // continuous street-level storefront wall (kills the mid-ground dead band)
+  shopWall: ["#241d30", "#2c2438", "#1c1726"],
+  shopWin: ["#ffd479", "#ffb74d", "#ffe6a8"],
+  awning: ["#b03555", "#7a2440", "#e0617f"],
+  awningCool: ["#2f7d8c", "#1f5662", "#46b3c4"],
+  // foreground street furniture silhouettes
+  fg: ["#04050c", "#080b16", "#0d1322"],
+  fgRim: "rgba(120,150,210,0.4)",
 };
 
 function pick(rand, arr) { return arr[(rand() * arr.length) | 0]; }
@@ -213,6 +223,29 @@ export function buildFacade(w, h, seed, label) {
   spill.addColorStop(1, "rgba(255,200,120,0)");
   ctx.fillStyle = spill; ctx.fillRect(dx - 26, dy - 26, 80, dh + 26);
 
+  // striped awning over the doorway (mid-detail vs Grid City)
+  const awY = dy - 9, awW = 40, awX = dx + 14 - awW / 2;
+  rect(ctx, awX, awY, awW, 2, "#0b0c14");
+  for (let i = 0; i < awW; i += 6) {
+    rect(ctx, awX + i, awY + 2, 3, 6, PAL.awning[0]);
+    rect(ctx, awX + i + 3, awY + 2, 3, 6, PAL.awning[1]);
+  }
+  rect(ctx, awX, awY + 2, awW, 1, PAL.awning[2]); // lit lip
+  // scalloped fringe
+  for (let i = 0; i < awW; i += 6) px(ctx, awX + i + 1, awY + 8, PAL.awning[1]);
+
+  // vent pipes + conduit running up the wall (right third)
+  const pX = w - 40;
+  rect(ctx, pX, 12, 2, h - 30, "#15171f");
+  rect(ctx, pX, 12, 1, h - 30, "#2b3142");
+  for (let y = 24; y < h - 24; y += 22) rect(ctx, pX - 1, y, 4, 2, "#1b1e29"); // brackets
+  // hanging vines off the fire escape (left)
+  for (let i = 0; i < 5; i++) {
+    const vx = 12 + i * 8, vh = 10 + ((rand() * 14) | 0);
+    rect(ctx, vx, 28, 1, vh, "#163a26");
+    px(ctx, vx, 28 + vh, "#1d6e44");
+  }
+
   // AC units
   for (let i = 0; i < 3; i++) {
     const ax = 30 + ((rand() * (w - 60)) | 0);
@@ -253,47 +286,149 @@ export function buildNeonSign(text, color) {
   return c;
 }
 
-// ---- Foreground depth prop: street planter / hedge silhouette --------------
-export function buildPlanter(w) {
-  const { c, ctx } = makeCanvas(w, 26);
-  const rand = rng(w * 13 + 5);
-  // trough
-  rect(ctx, 0, 16, w, 10, "#10131f");
-  rect(ctx, 0, 16, w, 2, "#1c2233");
-  // foliage clumps
-  for (let x = 1; x < w; x += 3) {
-    const top = 4 + ((rand() * 8) | 0);
-    rect(ctx, x, top, 3, 18 - (top - 4), "#0c2a1e");
-    px(ctx, x + 1, top, "#14402c");
-    if (rand() > 0.85) px(ctx, x + 1, top + 2, "#1d6e44"); // faint lit leaf
+// ---- Continuous street-level storefront wall -------------------------------
+// A lit ground-floor facade band that runs the whole level, sitting directly
+// behind the sidewalk. Fills the mid-ground "dead band" so the scene never
+// jumps from skyline straight to bare floor. (Lens: uniform connectedness.)
+export function buildShopRow(w, h) {
+  const { c, ctx } = makeCanvas(w, h);
+  const rand = rng(53);
+  // dark base wall with brick speckle
+  rect(ctx, 0, 0, w, h, PAL.shopWall[2]);
+  for (let y = 2; y < h; y += 4) {
+    for (let x = (y % 8 ? 0 : 4); x < w; x += 8) {
+      rect(ctx, x, y, 7, 3, pick(rand, PAL.shopWall));
+    }
+  }
+  rect(ctx, 0, h - 4, w, 4, "#0c0e16"); // grounding shadow at the pavement
+  // repeating storefront modules
+  const MOD = 60;
+  for (let x = 0; x < w; x += MOD) {
+    const lit = rand() > 0.25;
+    const cool = rand() > 0.6;
+    // shopfront window
+    const wy = 8;
+    rect(ctx, x + 6, wy - 2, 30, h - wy - 2, "#0a0c14"); // frame
+    const glass = lit ? (cool ? "#1d4a5e" : pick(rand, PAL.shopWin)) : "#0e1320";
+    rect(ctx, x + 8, wy, 26, h - wy - 5, glass);
+    if (lit) {
+      rect(ctx, x + 8, wy, 26, 4, "rgba(255,255,255,0.18)");
+      // interior silhouettes (shelves / patrons)
+      for (let sx = x + 10; sx < x + 32; sx += 5) {
+        if (rand() > 0.5) rect(ctx, sx, wy + 6, 3, h - wy - 12, "rgba(0,0,0,0.45)");
+      }
+    }
+    // mullions
+    rect(ctx, x + 20, wy, 1, h - wy - 5, "#0a0c14");
+    // awning
+    if (rand() > 0.4) {
+      const aw = cool ? PAL.awningCool : PAL.awning;
+      const ay = 4;
+      for (let i = 0; i < 30; i += 6) {
+        rect(ctx, x + 6 + i, ay, 3, 4, aw[0]);
+        rect(ctx, x + 9 + i, ay, 3, 4, aw[1]);
+      }
+      rect(ctx, x + 6, ay + 4, 30, 1, aw[2]);
+    }
+    // doorway between modules with warm spill
+    const ddx = x + 40;
+    rect(ctx, ddx, h - 18, 12, 18, "#0a0b12");
+    rect(ctx, ddx + 2, h - 16, 8, 16, lit ? "#241a12" : "#10131d");
+    if (lit) px(ctx, ddx + 6, h - 8, PAL.lampWarm);
+    // hanging neon dot
+    if (rand() > 0.55) px(ctx, x + 50, 6, cool ? PAL.neonCyan : PAL.neonPink);
   }
   return c;
 }
+
+// ---- Foreground street-furniture silhouette band ---------------------------
+// The closest parallax layer: a near-black silhouette of railing + clutter that
+// streaks past faster than the facade, giving the scene layered depth like the
+// target. Kept low so it never occludes the protagonist above the shins.
+export function buildForeground(w, h) {
+  const { c, ctx } = makeCanvas(w, h);
+  const rand = rng(impureSeed(w));
+  const base = h; // props stand on the bottom edge
+  const sil = PAL.fg[0];
+
+  // continuous low railing across the band
+  const railY = h - 16;
+  rect(ctx, 0, railY, w, 2, PAL.fg[1]);            // top rail
+  rect(ctx, 0, railY, w, 1, PAL.fgRim);            // rim highlight
+  for (let x = 4; x < w; x += 7) rect(ctx, x, railY, 2, 16, sil); // balusters
+  rect(ctx, 0, h - 3, w, 3, PAL.fg[0]);            // pavement lip
+
+  // scattered street furniture — all anchored to the bottom, <= ~30px tall
+  let x = 30 + ((rand() * 40) | 0);
+  while (x < w - 30) {
+    const t = (rand() * 5) | 0;
+    if (t === 0) {
+      // fire hydrant
+      rect(ctx, x, base - 14, 5, 14, sil);
+      rect(ctx, x - 1, base - 14, 7, 2, sil);
+      rect(ctx, x - 2, base - 9, 9, 2, sil);
+      px(ctx, x + 2, base - 12, PAL.fgRim);
+    } else if (t === 1) {
+      // trash bin
+      rect(ctx, x, base - 18, 12, 18, sil);
+      rect(ctx, x - 1, base - 18, 14, 2, PAL.fg[1]);
+      rect(ctx, x, base - 18, 1, 18, PAL.fgRim);
+    } else if (t === 2) {
+      // planter hedge (low, dark — not a bright green band)
+      rect(ctx, x, base - 9, 20, 9, sil);
+      for (let i = 0; i < 20; i += 3) rect(ctx, x + i, base - 13, 2, 5, "#0c2418");
+      px(ctx, x + 4, base - 13, "#1a5236");
+    } else if (t === 3) {
+      // newspaper / vending box
+      rect(ctx, x, base - 22, 10, 22, sil);
+      rect(ctx, x + 2, base - 18, 6, 6, "#10131d");
+      rect(ctx, x, base - 22, 1, 22, PAL.fgRim);
+    } else {
+      // bollard pair
+      rect(ctx, x, base - 11, 3, 11, sil);
+      rect(ctx, x + 8, base - 11, 3, 11, sil);
+      px(ctx, x, base - 11, PAL.fgRim);
+      px(ctx, x + 8, base - 11, PAL.fgRim);
+    }
+    x += 70 + ((rand() * 90) | 0);
+  }
+  return c;
+}
+
+function impureSeed(n) { return (n * 2654435761) >>> 0; }
 
 // ---- Street + sidewalk -----------------------------------------------------
 export function buildStreet(w, h) {
   const { c, ctx } = makeCanvas(w, h);
   const rand = rng(99);
-  // sidewalk
+  // sidewalk base
   rect(ctx, 0, 0, w, h, PAL.street[0]);
-  for (let y = 0; y < h; y += 2) {
-    rect(ctx, 0, y, w, 1, pick(rand, PAL.street));
+  // asphalt speckle (textured surface, not a flat/grid field)
+  for (let i = 0; i < w * h * 0.04; i++) {
+    const sx = (rand() * w) | 0, sy = 4 + ((rand() * (h - 4)) | 0);
+    px(ctx, sx, sy, pick(rand, PAL.street));
   }
-  // curb line
-  rect(ctx, 0, 0, w, 3, PAL.curb[0]);
+  // raised curb with a clear lit edge at the top of the sidewalk
+  rect(ctx, 0, 0, w, 4, PAL.curb[0]);
   rect(ctx, 0, 0, w, 1, PAL.curb[1]);
-  // paving cracks + manholes + puddles
-  for (let x = 0; x < w; x += 24) {
-    rect(ctx, x, 4, 1, h - 4, "rgba(0,0,0,0.3)");
+  rect(ctx, 0, 4, w, 1, "#0a0c14");
+  // sidewalk paving slabs — seams every 40px (reads as pavement, not a grid)
+  for (let x = 0; x < w; x += 40) {
+    rect(ctx, x, 6, 1, h - 6, "rgba(0,0,0,0.28)");
+    rect(ctx, x + 1, 6, 1, h - 6, "rgba(255,255,255,0.03)");
   }
-  for (let i = 0; i < w / 120; i++) {
+  // expansion gutter line lower down
+  rect(ctx, 0, h - 10, w, 1, "rgba(0,0,0,0.35)");
+  // manholes + puddle reflections
+  for (let i = 0; i < w / 130; i++) {
     const px0 = (rand() * w) | 0;
-    // puddle reflection (cool)
-    const pg = ctx.createLinearGradient(0, 6, 0, 16);
-    pg.addColorStop(0, "rgba(80,120,200,0.18)");
-    pg.addColorStop(1, "rgba(80,120,200,0)");
+    rect(ctx, px0, 8, 12, 6, "#10131d");
+    rect(ctx, px0, 8, 12, 1, "#23283a");
+    const pg = ctx.createLinearGradient(0, 14, 0, h - 6);
+    pg.addColorStop(0, "rgba(90,130,210,0.16)");
+    pg.addColorStop(1, "rgba(90,130,210,0)");
     ctx.fillStyle = pg;
-    ctx.fillRect(px0, 6, 30, 10);
+    ctx.fillRect(px0 - 18, 14, 40, h - 20);
   }
   return c;
 }
@@ -335,11 +470,18 @@ export function buildCharacter() {
     rect(ctx, cx - 4, y + 9, 9, 10, hd[1]);
     rect(ctx, cx - 4, y + 9, 9, 3, hd[2]); // lit top
     rect(ctx, cx - 4, y + 9, 2, 10, hd[0]); // shaded left
+    // rim light down the right edge so the figure separates from dark facade
+    rect(ctx, cx + 4, y + 9, 1, 10, PAL.hoodieRim);
+    // chest emblem (cyan privacy sigil) — a clear focal accent
+    px(ctx, cx, y + 13, PAL.neonCyan);
+    px(ctx, cx + 1, y + 12, "#bff6ff");
+    px(ctx, cx + 1, y + 14, PAL.neonCyan);
     // hood collar
     rect(ctx, cx - 3, y + 7, 7, 3, hd[2]);
     // arms swinging
     rect(ctx, cx - 5, y + 10 + Math.round(armPhase), 2, 7, hd[0]);
     rect(ctx, cx + 5, y + 10 - Math.round(armPhase), 2, 7, hd[2]);
+    px(ctx, cx + 6, y + 10 - Math.round(armPhase), PAL.hoodieRim); // arm rim
     // hands
     px(ctx, cx - 5, y + 17 + Math.round(armPhase), sk[1]);
     px(ctx, cx + 6, y + 17 - Math.round(armPhase), sk[1]);
@@ -351,9 +493,9 @@ export function buildCharacter() {
     rect(ctx, cx - 4, y, 9, 3, hr[0]);
     rect(ctx, cx - 4, y, 2, 5, hr[1]);
     rect(ctx, cx + 3, y, 2, 5, hr[1]);
-    // eye glint (cyber visor)
-    px(ctx, cx + 1, y + 4, PAL.neonCyan);
-    px(ctx, cx + 2, y + 4, "#bff6ff");
+    // eye glint (cyber visor) — brighter + wider so the head reads
+    rect(ctx, cx, y + 4, 3, 1, PAL.neonCyan);
+    px(ctx, cx + 1, y + 4, "#e6ffff");
   };
 
   // frame 0: idle
@@ -367,7 +509,16 @@ export function buildCharacter() {
   }
   // frame 5: interact (arms up to terminal)
   draw(5 * FW, 0, -3, 0);
-  return { canvas: c, fw: FW, fh: FH, frames };
+
+  // baked dark silhouette of every frame, for a 1px runtime outline that
+  // separates the protagonist from the brick facade (Fitts/figure-ground).
+  const sil = makeCanvas(FW * frames, FH);
+  sil.ctx.drawImage(c, 0, 0);
+  sil.ctx.globalCompositeOperation = "source-in";
+  sil.ctx.fillStyle = PAL.outline;
+  sil.ctx.fillRect(0, 0, FW * frames, FH);
+
+  return { canvas: c, silhouette: sil.c, fw: FW, fh: FH, frames };
 }
 
 // ---- Data-broker kiosk (the quest interactable) ----------------------------
