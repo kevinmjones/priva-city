@@ -1,4 +1,5 @@
-// capture.mjs — headless screenshots of the Phase 0 slice for the art-bar gate.
+// capture.mjs — headless screenshots of the full build for the art-lock gate (OTL-82).
+// Renders every shipping surface, fails loudly (exit 1) on any console/page error.
 import { chromium } from "playwright";
 import { createServer } from "http";
 import { readFile } from "fs/promises";
@@ -26,6 +27,7 @@ const base = `http://localhost:${port}`;
 const OUT = "docs/visual-audit";
 
 const browser = await chromium.launch();
+const allErrors = [];
 
 async function shot(name, w, h, fn) {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
@@ -36,14 +38,15 @@ async function shot(name, w, h, fn) {
   await page.waitForTimeout(400);
   if (fn) await fn(page);
   await page.screenshot({ path: join(OUT, name) });
-  if (errors.length) console.log(`  ! ${name} errors:`, errors.slice(0, 4));
+  if (errors.length) { console.log(`  ! ${name} errors:`, errors.slice(0, 4)); allErrors.push(...errors.map((e) => `${name}: ${e}`)); }
+  else console.log(`  ✓ ${name}`);
   await page.close();
   return errors;
 }
 
 const wait = (p, ms) => p.waitForTimeout(ms);
 
-console.log("Capturing Phase 0 slice...");
+console.log("Capturing full build (art-lock gate)...");
 
 // 1. Title screen
 await shot("v2-title-1440x810.png", 1440, 810, async (p) => { await wait(p, 800); });
@@ -59,20 +62,27 @@ await shot("v2-gameplay-1440x810.png", 1440, 810, async (p) => {
   await wait(p, 500);
 });
 
-// 3. Puzzle overlay
+// 3. Puzzle overlay — open Quest 1 (Consent Switchboard) at the kiosk
 await shot("v2-puzzle-1440x810.png", 1440, 810, async (p) => {
-  await p.evaluate(() => { window.__priva.startGame(); window.__priva.player.x = 1255; });
-  await wait(p, 200);
-  await p.evaluate(() => window.__priva.openPuzzle());
+  await p.evaluate(() => {
+    const g = window.__priva;
+    g.startGame();
+    g.player.x = g.QUEST_POS[0];
+    g.openPuzzle(0);
+  });
   await wait(p, 400);
 });
 
-// 4. Success / banner
+// 4. Success / banner — resolve Quest 1 successfully
 await shot("v2-success-1440x810.png", 1440, 810, async (p) => {
-  await p.evaluate(() => { window.__priva.startGame(); window.__priva.player.x = 1255; });
-  await wait(p, 200);
-  await p.evaluate(() => window.__priva.closePuzzle(true));
-  await wait(p, 250);
+  await p.evaluate(() => {
+    const g = window.__priva;
+    g.startGame();
+    g.player.x = g.QUEST_POS[0];
+    g.openPuzzle(0);
+    g.closePuzzle(true);
+  });
+  await wait(p, 300);
 });
 
 // 5. Mobile portrait
@@ -121,7 +131,7 @@ await shot("v2-hero-1440x810.png", 1440, 810, async (p) => {
     .tag{font-size:10px;color:#7d8db5;margin-top:5px}
   </style></head><body><div class="row">
     <div class="col a"><h3>GRID CITY — board target</h3><img src="${base}/assets/reference/board-target-reference.png"><div class="tag">reference bar</div></div>
-    <div class="col b"><h3>PRIVA-CITY v2 — Phase 0 slice (ours)</h3><img src="${base}/docs/visual-audit/v2-hero-1440x810.png"><div class="tag">pixel-art · parallax · lighting · animated character · live quest</div></div>
+    <div class="col b"><h3>PRIVA-CITY v2 — Phase 1 build (ours)</h3><img src="${base}/docs/visual-audit/v2-hero-1440x810.png"><div class="tag">pixel-art · parallax · lighting · animated character · 4 live quests</div></div>
   </div></body></html>`;
   await page.setContent(html, { waitUntil: "networkidle" });
   await wait(page, 500);
@@ -131,4 +141,10 @@ await shot("v2-hero-1440x810.png", 1440, 810, async (p) => {
 
 await browser.close();
 server.close();
-console.log("Done -> docs/visual-audit/");
+
+if (allErrors.length) {
+  console.error(`\nART-LOCK GATE FAILED — ${allErrors.length} surface error(s):`);
+  for (const e of allErrors) console.error(`  - ${e}`);
+  process.exit(1);
+}
+console.log("Done -> docs/visual-audit/  (art-lock gate: all surfaces clean)");

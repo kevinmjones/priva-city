@@ -111,14 +111,21 @@ kbd {
  * size at every breakpoint, so font sizes and positions read correctly at 1440p
  * and scale naturally down on mobile.
  */
-#hud { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
+#hud { position: absolute; inset: 0; pointer-events: none; }
 
+/* Center the virtual viewport with translate(-50%,-50%) rather than grid
+ * place-items:center: when --hud-scale < 1 (mobile) the unscaled 480px box is
+ * wider than the screen, and grid centering start-aligns an oversized item,
+ * shoving the right-anchored quest panel off-screen. translate centering stays
+ * exact regardless of overflow. */
 #hud-vp {
   width: 480px;
   height: 270px;
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   pointer-events: none;
-  transform: scale(var(--hud-scale, 1));
+  transform: translate(-50%, -50%) scale(var(--hud-scale, 1));
   transform-origin: center center;
 }
 
