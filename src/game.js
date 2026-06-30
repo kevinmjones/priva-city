@@ -603,7 +603,7 @@ function updateHUD() {
   const ql = document.getElementById("questList");
   if (ql) {
     ql.innerHTML = game.quests.map((q) =>
-      `<li class="${q.done ? "done" : ""}">${q.done ? "✔" : "▸"} ${q.label}</li>`).join("");
+      `<li class="${q.done ? "done" : ""}">${q.done ? "✔" : "▸"} ${q.short ?? q.label}</li>`).join("");
   }
   const s = document.getElementById("sigilCount");
   if (s) s.textContent = `${game.sigils}/${game.quests.length}`;

@@ -6,11 +6,14 @@
 //  3. Retention Sweep (classify) — data retention & minimisation
 //  4. Vault Seal Protocol (sequence) — breach response procedure
 
+// `short` drives the compact MAIN QUEST HUD panel (OTL-97 — keeps the corner
+// cluster small so the playfield stays dominant); `label` is the full
+// descriptive objective, reserved for briefings / future detail views.
 export const QUESTS = [
-  { id: "consent",   label: "Revoke the data broker's bundled consent grab." },
-  { id: "rights",    label: "File a data-subject rights request at the Exchange." },
-  { id: "retention", label: "Purge stale telemetry at Retention Rail." },
-  { id: "vault",     label: "Seal the Privacy Vault with the breach protocol." },
+  { id: "consent",   short: "Revoke consent grab",   label: "Revoke the data broker's bundled consent grab." },
+  { id: "rights",    short: "File rights request",   label: "File a data-subject rights request at the Exchange." },
+  { id: "retention", short: "Purge stale telemetry", label: "Purge stale telemetry at Retention Rail." },
+  { id: "vault",     short: "Seal the Privacy Vault", label: "Seal the Privacy Vault with the breach protocol." },
 ];
 
 // Dispatch to the correct puzzle maker by quest ID.

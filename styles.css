@@ -10,6 +10,11 @@
   --ink: #070a20;
   --panel: rgba(10, 14, 30, 0.82);
   --mono: "Press Start 2P", ui-monospace, monospace;
+  /* OTL-97 — single safe-area inset for every corner HUD cluster, so the
+   * brand, quest panel, mute and control bar share consistent margins and
+   * never drift into each other as text length changes. In 480×270 virtual
+   * units (scaled by --hud-scale to the canvas). */
+  --hud-safe: 12px;
 }
 
 html, body {
@@ -181,44 +186,47 @@ kbd {
 }
 
 .hud-brand {
-  position: absolute; top: 14px; left: 16px;
-  display: flex; align-items: center; gap: 10px;
-  background: var(--panel); padding: 8px 12px; border-radius: 4px;
+  position: absolute; top: var(--hud-safe); left: var(--hud-safe);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--panel); padding: 6px 9px; border-radius: 4px;
   border: 1px solid #1d2750;
 }
 .hud-mark {
-  width: 14px; height: 14px; border-radius: 50%;
+  width: 11px; height: 11px; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, var(--cyan), #0b6e85);
   box-shadow: 0 0 10px var(--cyan);
 }
-.hud-brand strong { display: block; font-size: 9px; letter-spacing: 1px; }
+.hud-brand strong { display: block; font-size: 8px; letter-spacing: 1px; }
 .hud-brand span { font-size: 6px; color: #8fa6cf; }
 
+/* Compact MAIN QUEST panel (OTL-97). Width capped at ~24% of the 480-unit
+ * playfield; short single-/two-line objectives keep it short enough that its
+ * sigils footer stays well clear of the bottom control bar. */
 #questLog {
-  position: absolute; top: 14px; right: 16px;
-  width: 160px;
+  position: absolute; top: var(--hud-safe); right: var(--hud-safe);
+  width: 116px;
   background: var(--panel); border: 1px solid #1d2750;
-  border-radius: 4px; padding: 10px 12px;
+  border-radius: 4px; padding: 8px 9px;
 }
-#questLog h2 { font-size: 8px; color: var(--pink); letter-spacing: 1px; margin-bottom: 8px; }
+#questLog h2 { font-size: 7px; color: var(--pink); letter-spacing: 1px; margin-bottom: 6px; }
 #questList { list-style: none; }
-#questList li { font-size: 7px; line-height: 1.9; color: #cfe1ff; }
+#questList li { font-size: 6px; line-height: 1.7; color: #cfe1ff; }
 #questList li.done { color: var(--green); text-decoration: line-through; opacity: 0.8; }
-.sigils { margin-top: 10px; padding-top: 8px; border-top: 1px solid #1d2750; font-size: 7px; color: #8fa6cf; }
+.sigils { margin-top: 7px; padding-top: 6px; border-top: 1px solid #1d2750; font-size: 6px; color: #8fa6cf; }
 .sigils b { color: var(--cyan); }
 
 .mute {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-  pointer-events: auto; font-family: var(--mono); font-size: 7px;
+  position: absolute; top: var(--hud-safe); left: 50%; transform: translateX(-50%);
+  pointer-events: auto; font-family: var(--mono); font-size: 6px;
   color: var(--cyan); background: var(--panel); border: 1px solid #1d2750;
-  border-radius: 4px; padding: 6px 10px; cursor: pointer; white-space: nowrap;
+  border-radius: 4px; padding: 5px 8px; cursor: pointer; white-space: nowrap;
 }
 .mute.muted { color: #5b6a93; }
 
 #interactPrompt {
-  position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(8px);
+  position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%) translateY(8px);
   background: rgba(52, 231, 255, 0.14); border: 1px solid var(--cyan);
-  color: #eaffff; font-size: 8px; padding: 7px 12px; border-radius: 4px;
+  color: #eaffff; font-size: 7px; padding: 6px 10px; border-radius: 4px;
   opacity: 0; transition: opacity 0.15s, transform 0.15s;
   box-shadow: 0 0 18px rgba(52, 231, 255, 0.35);
 }
@@ -226,10 +234,10 @@ kbd {
 #interactPrompt kbd { background: var(--cyan); color: var(--ink); border: none; }
 
 #controlBar {
-  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
-  display: flex; gap: 18px;
+  position: absolute; left: 50%; bottom: var(--hud-safe); transform: translateX(-50%);
+  display: flex; gap: 14px;
   background: var(--panel); border: 1px solid #1d2750;
-  border-radius: 4px; padding: 8px 16px; font-size: 7px; color: #8fa6cf;
+  border-radius: 4px; padding: 7px 12px; font-size: 6px; color: #8fa6cf;
 }
 
 /* ---------- TOUCH ---------- */
@@ -364,4 +372,12 @@ kbd {
    * drop the cosmetic subtitle rather than ship blurred text. The brand title
    * (PRIVA-CITY) stays. */
   .hud-brand span { display: none; }
+
+  /* OTL-97 — the compact desktop type scale (6px) drops below the mobile
+   * legibility floor once multiplied by the ~0.81 portrait --hud-scale. The
+   * bottom control bar is hidden on touch (touch pad replaces it), so there is
+   * no corner-collision risk here — restore the readable quest type instead. */
+  #questLog h2 { font-size: 8px; }
+  #questList li { font-size: 7px; line-height: 1.8; }
+  .sigils { font-size: 7px; }
 }
