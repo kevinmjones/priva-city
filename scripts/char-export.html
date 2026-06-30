@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body { background: #0b0b1a; margin: 0; }
+canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="out"></canvas>
+<script type="module">
+import { buildCharacter } from "/src/art.js";
+
+const { canvas: c, silhouette: sil, fw, fh, frames } = buildCharacter();
+const W = fw * frames, H = fh;
+const ZOOM = 6;
+
+const out = document.getElementById("out");
+out.width  = W * ZOOM;
+out.height = H * ZOOM;
+
+const ctx = out.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+// 6× zoomed colour sheet
+ctx.fillStyle = "#120c20";
+ctx.fillRect(0, 0, out.width, out.height);
+ctx.drawImage(c, 0, 0, W, H, 0, 0, W * ZOOM, H * ZOOM);
+
+// export raw 1:1 sheet as data URL for capture script
+const raw = document.createElement("canvas");
+raw.width  = W;
+raw.height = H;
+const rctx = raw.getContext("2d");
+rctx.imageSmoothingEnabled = false;
+rctx.fillStyle = "#120c20";
+rctx.fillRect(0, 0, W, H);
+rctx.drawImage(c, 0, 0);
+window.__sheetDataUrl  = raw.toDataURL("image/png");
+
+// preview (zoomed) data URL
+window.__previewDataUrl = out.toDataURL("image/png");
+window.__fw = fw;
+window.__fh = fh;
+window.__frames = frames;
+window.__exportDone = true;
+</script>
+</body>
+</html>

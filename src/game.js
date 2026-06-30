@@ -13,7 +13,7 @@ const VW = 480, VH = 270;           // internal virtual resolution (16:9)
 const WORLD_W = 2200;               // level width (Phase 0 slice)
 const GROUND_Y = 210;               // y of sidewalk top in world space
 const GRAV = 0.5, MOVE = 1.6, JUMP = 7.4, FRICTION = 0.8;
-const CFH = 26;                     // character frame height
+const CFH = 32;                     // character frame height (20×32 sprite)
 const WALL_H = 40;                  // Phase 1: wall-detail band above shopRow
 
 const canvas = document.getElementById("game");
@@ -37,6 +37,9 @@ function buildAssets() {
   A.lamp = art.buildLamp();
   A.fog = art.buildFog(VW, VH);
   A.kiosk = art.buildKiosk();
+  A.termCyan  = art.buildTerminal(art.PAL.neonCyan);
+  A.termGreen = art.buildTerminal(art.PAL.neonGreen);
+  A.termPink  = art.buildTerminal(art.PAL.neonPink);
   const ch = art.buildCharacter();
   A.char = ch.canvas; A.charSil = ch.silhouette; A.cfw = ch.fw; A.cfh = ch.fh; A.cframes = ch.frames;
 
@@ -47,10 +50,14 @@ function buildAssets() {
 
 const SHOP_H = 48, FG_H = 48;
 
-// ---- world entities (Phase 0 slice) ----
+// ---- world entities (Phase 1: 4 playable privacy quests) ----
 const facadeX = 1080;
 const lamps = [240, 640, 1040, 1480, 1900];
-const kioskX = facadeX + 180;
+const kioskX    = facadeX + 180;  // Quest 1: Consent Switchboard
+const rightsX   = 460;            // Quest 2: Rights Request Terminal
+const retentionX = 1660;          // Quest 3: Retention Sweep
+const vaultX    = 1960;           // Quest 4: Vault Seal Protocol
+const QUEST_POS = [kioskX, rightsX, retentionX, vaultX];
 
 const player = {
   x: 180, y: GROUND_Y - CFH, vx: 0, vy: 0, onGround: true,
@@ -108,6 +115,7 @@ const game = {
   flash: 0,
   t: 0,
   activePuzzle: null,
+  activePuzzleIdx: 0,
   banner: null, bannerT: 0,
 };
 
@@ -126,13 +134,21 @@ function startGame() {
 
 function showBanner(title, sub) { game.banner = { title, sub }; game.bannerT = 180; }
 
-// ---- the quest interaction (consent switchboard puzzle) ----
-function openPuzzle() {
-  const p = makePuzzle();
+// ---- quest interaction system (Phase 1: 4 distinct puzzle mechanics) ----
+const QUEST_BANNERS = [
+  ["CONSENT REVOKED",  "+1 Sigil · Broker node offline"],
+  ["RIGHTS FILED",     "+1 Sigil · Data-subject rights asserted"],
+  ["RETENTION PURGED", "+1 Sigil · Stale telemetry cleared"],
+  ["VAULT SEALED",     "+1 Sigil · Breach protocol complete"],
+];
+
+function openPuzzle(questIdx) {
+  const p = makePuzzle(game.quests[questIdx].id);
   game.activePuzzle = p;
+  game.activePuzzleIdx = questIdx;
   game.scene = "puzzle";
   player.interacting = true;
-  player.anim = 5;
+  player.anim = 6;
   sfx.interact();
   renderPuzzleDOM(p);
   document.getElementById("puzzle").classList.remove("hidden");
@@ -142,15 +158,17 @@ function closePuzzle(success) {
   document.getElementById("puzzle").classList.add("hidden");
   game.scene = "play";
   player.interacting = false;
+  const qi = game.activePuzzleIdx;
   game.activePuzzle = null;
   if (success) {
-    game.quests[0].done = true;
+    game.quests[qi].done = true;
     game.sigils++;
     game.shake = 14; game.flash = 1;
-    burst(kioskX, GROUND_Y - 20, "rgba(93,255,155,0.9)", 60);
-    burst(kioskX, GROUND_Y - 20, "rgba(52,231,255,0.9)", 40);
+    const bx = QUEST_POS[qi];
+    burst(bx, GROUND_Y - 20, "rgba(93,255,155,0.9)", 60);
+    burst(bx, GROUND_Y - 20, "rgba(52,231,255,0.9)", 40);
     sfx.success();
-    showBanner("CONSENT REVOKED", "+1 Consent Sigil  ·  Broker node offline");
+    showBanner(...QUEST_BANNERS[qi]);
     updateHUD();
     if (game.quests.every((q) => q.done)) setTimeout(() => (game.scene = "win"), 1400);
   } else {
@@ -158,6 +176,15 @@ function closePuzzle(success) {
   }
 }
 
+function showPzFeedback(msg) {
+  const fb = document.getElementById("pzFeedback");
+  if (!fb) return;
+  fb.textContent = msg;
+  fb.classList.add("show");
+  setTimeout(() => fb.classList.remove("show"), 2600);
+}
+
+// Dispatch to the renderer for the active puzzle type.
 function renderPuzzleDOM(p) {
   const root = document.getElementById("puzzleBody");
   root.innerHTML = "";
@@ -166,6 +193,20 @@ function renderPuzzleDOM(p) {
   h.innerHTML = `<div class="pz-title">${p.title}</div><div class="pz-npc">${p.npc}</div><p class="pz-brief">${p.brief}</p>`;
   root.appendChild(h);
 
+  switch (p.type) {
+    case "multichoice": renderMultichoiceBody(root, p); break;
+    case "classify":    renderClassifyBody(root, p);    break;
+    case "sequence":    renderSequenceBody(root, p);    break;
+    default:            renderTogglesBody(root, p);     break;
+  }
+
+  const fb = document.createElement("div");
+  fb.id = "pzFeedback"; fb.className = "pz-feedback";
+  root.appendChild(fb);
+}
+
+// Quest 1 — toggle-switch body: set each permission to the privacy-correct state.
+function renderTogglesBody(root, p) {
   const list = document.createElement("div");
   list.className = "pz-toggles";
   p.toggles.forEach((tg) => {
@@ -176,33 +217,137 @@ function renderPuzzleDOM(p) {
     list.appendChild(row);
   });
   root.appendChild(list);
+  appendPzActions(root, makePzConfirm("Submit consent settings", () =>
+    p.toggles.every((tg) => tg.on === tg.correct) || (showPzFeedback(p.wrongHint), false)
+  ));
+}
 
+// Quest 2 — multichoice body: match each citizen's case to the correct GDPR right.
+function renderMultichoiceBody(root, p) {
+  const wrap = document.createElement("div");
+  wrap.className = "pz-questions";
+  p.questions.forEach((q, qi) => {
+    const block = document.createElement("div");
+    block.className = "pz-question";
+    const scene = document.createElement("p");
+    scene.className = "pz-scenario";
+    scene.textContent = q.scenario;
+    block.appendChild(scene);
+    const opts = document.createElement("div");
+    opts.className = "pz-options";
+    q.options.forEach((opt, oi) => {
+      const btn = document.createElement("button");
+      btn.className = "pz-option" + (p.answers[qi] === oi ? " selected" : "");
+      btn.textContent = opt;
+      btn.onclick = () => {
+        p.answers[qi] = oi;
+        opts.querySelectorAll(".pz-option").forEach((b, i) => b.classList.toggle("selected", i === oi));
+        sfx.toggle();
+      };
+      opts.appendChild(btn);
+    });
+    block.appendChild(opts);
+    wrap.appendChild(block);
+  });
+  root.appendChild(wrap);
+  appendPzActions(root, makePzConfirm("File requests", () => {
+    if (p.answers.some((a) => a === null)) { showPzFeedback("Select a right for each case first."); return false; }
+    return p.questions.every((q, i) => p.answers[i] === q.correct) || (showPzFeedback(p.wrongHint), false);
+  }));
+}
+
+// Quest 3 — classify body: mark each data record KEEP or PURGE.
+function renderClassifyBody(root, p) {
+  const list = document.createElement("div");
+  list.className = "pz-records";
+  p.records.forEach((rec) => {
+    const row = document.createElement("div");
+    row.className = "pz-record";
+    const lbl = document.createElement("span");
+    lbl.className = "pz-rec-label";
+    lbl.textContent = rec.label;
+    const keepBtn = document.createElement("button");
+    keepBtn.className = "pz-classify-btn pz-keep" + (rec.choice === false ? " active" : "");
+    keepBtn.textContent = "KEEP";
+    const purgeBtn = document.createElement("button");
+    purgeBtn.className = "pz-classify-btn pz-purge" + (rec.choice === true ? " active" : "");
+    purgeBtn.textContent = "PURGE";
+    keepBtn.onclick = () => { rec.choice = false; keepBtn.classList.add("active"); purgeBtn.classList.remove("active"); sfx.toggle(); };
+    purgeBtn.onclick = () => { rec.choice = true;  purgeBtn.classList.add("active"); keepBtn.classList.remove("active"); sfx.toggle(); };
+    row.appendChild(lbl); row.appendChild(keepBtn); row.appendChild(purgeBtn);
+    list.appendChild(row);
+  });
+  root.appendChild(list);
+  appendPzActions(root, makePzConfirm("Submit sweep", () => {
+    if (p.records.some((r) => r.choice === null)) { showPzFeedback("Classify every record before submitting."); return false; }
+    return p.records.every((r) => r.choice === r.purge) || (showPzFeedback(p.wrongHint), false);
+  }));
+}
+
+// Quest 4 — sequence body: click breach-response steps in the correct order.
+function renderSequenceBody(root, p) {
+  const grid = document.createElement("div");
+  grid.className = "pz-sequence";
+  let submitBtn;
+
+  const refreshStep = (btn, step) => {
+    btn.classList.toggle("done", step.clicked > 0);
+    btn.querySelector(".pz-seq-num").textContent = step.clicked > 0 ? step.clicked : "?";
+  };
+
+  p.steps.forEach((step) => {
+    const btn = document.createElement("button");
+    btn.className = "pz-seq-step" + (step.clicked > 0 ? " done" : "");
+    const num = document.createElement("span"); num.className = "pz-seq-num";
+    num.textContent = step.clicked > 0 ? step.clicked : "?";
+    const lbl = document.createElement("span"); lbl.className = "pz-seq-label";
+    lbl.textContent = step.label;
+    btn.appendChild(num); btn.appendChild(lbl);
+    btn.onclick = () => {
+      if (step.clicked > 0) return;
+      p.clickSeq++;
+      step.clicked = p.clickSeq;
+      refreshStep(btn, step);
+      sfx.toggle();
+      if (submitBtn) submitBtn.disabled = p.clickSeq < p.steps.length;
+    };
+    grid.appendChild(btn);
+  });
+  root.appendChild(grid);
+
+  submitBtn = makePzConfirm("Submit sequence", () => {
+    if (p.clickSeq < p.steps.length) { showPzFeedback("Click all steps first."); return false; }
+    if (!p.steps.every((s) => s.clicked === s.order)) {
+      p.steps.forEach((s) => { s.clicked = 0; });
+      p.clickSeq = 0;
+      grid.querySelectorAll(".pz-seq-step").forEach((b, i) => refreshStep(b, p.steps[i]));
+      submitBtn.disabled = true;
+      showPzFeedback(p.wrongHint);
+      return false;
+    }
+    return true;
+  });
+  submitBtn.disabled = p.clickSeq < p.steps.length;
+  appendPzActions(root, submitBtn);
+}
+
+function makePzConfirm(label, checkFn) {
+  const btn = document.createElement("button");
+  btn.className = "pz-confirm";
+  btn.textContent = label;
+  btn.onclick = () => { if (!checkFn()) sfx.error(); };
+  return btn;
+}
+
+function appendPzActions(root, confirmBtn) {
   const actions = document.createElement("div");
   actions.className = "pz-actions";
-  const confirm = document.createElement("button");
-  confirm.className = "pz-confirm";
-  confirm.textContent = "Submit consent settings";
-  confirm.onclick = () => {
-    const ok = p.toggles.every((tg) => tg.on === tg.correct);
-    if (ok) closePuzzle(true);
-    else {
-      sfx.error();
-      const fb = document.getElementById("pzFeedback");
-      fb.textContent = p.wrongHint;
-      fb.classList.add("show");
-      setTimeout(() => fb.classList.remove("show"), 2400);
-    }
-  };
   const cancel = document.createElement("button");
   cancel.className = "pz-cancel";
   cancel.textContent = "Walk away (Esc)";
   cancel.onclick = () => closePuzzle(false);
-  actions.appendChild(confirm); actions.appendChild(cancel);
+  actions.appendChild(confirmBtn); actions.appendChild(cancel);
   root.appendChild(actions);
-
-  const fb = document.createElement("div");
-  fb.id = "pzFeedback"; fb.className = "pz-feedback";
-  root.appendChild(fb);
 }
 
 // ---- update ----
@@ -238,7 +383,7 @@ function update() {
   }
   player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
 
-  if (!player.onGround) { player.state = "jump"; player.anim = 2; }
+  if (!player.onGround) { player.state = "jump"; player.anim = 5; }
   else if (Math.abs(player.vx) > 0.3) {
     player.state = "walk";
     player.animT += Math.abs(player.vx) * 0.12;
@@ -252,11 +397,22 @@ function update() {
   game.camX += (target - game.camX) * 0.12;
   game.camX = Math.max(0, Math.min(WORLD_W - VW, game.camX));
 
-  const nearKiosk = !game.quests[0].done && Math.abs(player.x - kioskX) < 26;
+  // Interaction zone check — first matching undone quest wins.
   const prompt = document.getElementById("interactPrompt");
-  if (nearKiosk) { prompt.classList.add("show"); if (interactPressed) openPuzzle(); }
-  else prompt.classList.remove("show");
-
+  const zones = [
+    { x: kioskX, idx: 0 }, { x: rightsX, idx: 1 },
+    { x: retentionX, idx: 2 }, { x: vaultX, idx: 3 },
+  ];
+  let nearZone = null;
+  for (const z of zones) {
+    if (!game.quests[z.idx].done && Math.abs(player.x - z.x) < 28) { nearZone = z; break; }
+  }
+  if (nearZone) {
+    prompt.classList.add("show");
+    if (interactPressed) openPuzzle(nearZone.idx);
+  } else {
+    prompt.classList.remove("show");
+  }
   interactPressed = false;
 }
 
@@ -296,11 +452,19 @@ function render() {
     ctx.drawImage(A.lamp, sxp, GROUND_Y - 60);
   });
 
+  // Quest 1: Consent Kiosk
   const kx = Math.round(kioskX - game.camX);
   ctx.save();
   if (game.quests[0].done) ctx.globalAlpha = 0.5;
   ctx.drawImage(A.kiosk, kx - 13, GROUND_Y - 38);
   ctx.restore();
+
+  // Quest 2: Rights terminal (cyan)
+  drawTerminal(rightsX,    A.termCyan,  game.quests[1].done, art.PAL.neonCyan,  "RIGHTS EXCH");
+  // Quest 3: Retention terminal (green)
+  drawTerminal(retentionX, A.termGreen, game.quests[2].done, art.PAL.neonGreen, "RETAIN RAIL");
+  // Quest 4: Vault terminal (pink)
+  drawTerminal(vaultX,     A.termPink,  game.quests[3].done, art.PAL.neonPink,  "PRIV VAULT");
 
   drawPlayer();
 
@@ -322,6 +486,9 @@ function render() {
     glow(lc, sxp + 6, GROUND_Y + 4, 30, "rgba(255,190,110,0.35)");
   });
   if (!game.quests[0].done) glow(lc, kioskX - game.camX, GROUND_Y - 22, 26, "rgba(52,231,255,0.5)");
+  if (!game.quests[1].done) glow(lc, rightsX    - game.camX, GROUND_Y - 18, 22, "rgba(52,231,255,0.45)");
+  if (!game.quests[2].done) glow(lc, retentionX - game.camX, GROUND_Y - 18, 22, "rgba(93,255,155,0.45)");
+  if (!game.quests[3].done) glow(lc, vaultX     - game.camX, GROUND_Y - 18, 22, "rgba(255,77,141,0.4)");
   glow(lc, facadeX - game.camX * 0.85 + 140, GROUND_Y - 138, 40, "rgba(255,77,141,0.4)");
   glow(lc, facadeX - game.camX * 0.85 + A.facadeDoorX, GROUND_Y - 16, 30, "rgba(255,200,120,0.4)");
   // Phase 1: shopfront ambient warm glows every 120px — breaks cyan dominance
@@ -351,6 +518,22 @@ function render() {
     ctx.fillRect(0, 0, VW, VH);
   }
   if (game.bannerT > 0) drawBanner();
+}
+
+function drawTerminal(worldX, sprite, done, accentColor, label) {
+  const sx = Math.round(worldX - game.camX);
+  if (sx < -30 || sx > VW + 30) return;
+  ctx.save();
+  if (done) ctx.globalAlpha = 0.45;
+  ctx.drawImage(sprite, sx - 11, GROUND_Y - 30);
+  if (!done) {
+    ctx.font = "bold 6px monospace";
+    ctx.fillStyle = accentColor;
+    ctx.textAlign = "center";
+    ctx.fillText(label, sx, GROUND_Y - 34);
+    ctx.textAlign = "left";
+  }
+  ctx.restore();
 }
 
 function glow(c, x, y, r, color) {
@@ -425,9 +608,10 @@ function updateHUD() {
 
 // ---- scaling ----
 function resize() {
-  const scale = Math.max(1, Math.min(window.innerWidth / VW, window.innerHeight / VH));
-  canvas.style.width = VW * scale + "px";
-  canvas.style.height = VH * scale + "px";
+  const scale = Math.min(window.innerWidth / VW, window.innerHeight / VH);
+  canvas.style.width = (VW * scale) + "px";
+  canvas.style.height = (VH * scale) + "px";
+  document.documentElement.style.setProperty("--hud-scale", scale.toFixed(4));
 }
 window.addEventListener("resize", resize);
 
@@ -488,8 +672,8 @@ function boot() {
   requestAnimationFrame(loop);
 }
 
-// expose a couple of hooks for headless QA screenshots
-window.__priva = { startGame, openPuzzle, closePuzzle, game, player };
+// expose hooks for headless QA
+window.__priva = { startGame, openPuzzle, closePuzzle, game, player, QUEST_POS };
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
 else boot();

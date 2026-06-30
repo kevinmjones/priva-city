@@ -622,70 +622,104 @@ export function buildLamp() {
 }
 
 // ---- Animated character (privacy operative in a teal hoodie) ---------------
-// 16x26 frames: idle(1) + walk(4) drawn pixel-by-pixel with shading.
+// 20x32 frames: idle(1) + walk(4) + jump(1) + interact(1) = 7 frames.
+// Upsized from 16x26 to fix "small green blob" read at gameplay zoom.
+// Design: warm skin face pops against cool neon (value contrast); wide bright
+// cyan visor is the strongest facial cue at any scale; 2px cyan rim on right
+// torso edge separates figure from dark facades; hood wider than head for a
+// distinctive outer silhouette; ±4px leg stride + ±2px arm counter-swing.
 export function buildCharacter() {
-  const FW = 16, FH = 26, frames = 6;
+  const FW = 20, FH = 32, frames = 7;
   const { c, ctx } = makeCanvas(FW * frames, FH);
 
-  const draw = (ox, legPhase, armPhase, bob) => {
+  const draw = (ox, legPhase, armPhase, bob, interacting) => {
     const sk = PAL.skin, hd = PAL.hoodie, pn = PAL.pants, hr = PAL.hair;
-    const cx = ox + 8;
-    const y = bob;
-    // shadow handled by renderer
-    // legs
-    const lLeg = Math.round(legPhase);
-    const rLeg = -lLeg;
-    rect(ctx, cx - 3, y + 18, 3, 6 + Math.max(0, -lLeg), pn[0]);
-    rect(ctx, cx + 1, y + 18, 3, 6 + Math.max(0, -rLeg), pn[1]);
-    // feet
-    rect(ctx, cx - 4 + lLeg, y + 23, 4, 2, "#15151f");
-    rect(ctx, cx + 1 - lLeg, y + 23, 4, 2, "#15151f");
+    const cx = ox + 10; // centre of 20px frame
+    const y = bob | 0;
+    const lStep = Math.round(legPhase);
+    const aSwing = Math.round(armPhase);
+
+    // legs (drawn first so torso overlaps the top edge)
+    rect(ctx, cx - 4, y + 22, 4, 7, pn[0]);
+    rect(ctx, cx - 4, y + 22, 1, 7, "rgba(255,255,255,0.07)");
+    rect(ctx, cx + 1, y + 22, 4, 7, pn[1]);
+    // shoes shift with stride so feet visibly move
+    rect(ctx, cx - 4 + lStep, y + 29, 4, 3, "#1a1a2e");
+    rect(ctx, cx - 4 + lStep, y + 29, 4, 1, "#28283e");
+    rect(ctx, cx + 1 - lStep, y + 29, 4, 3, "#1a1a2e");
+    rect(ctx, cx + 1 - lStep, y + 29, 4, 1, "#28283e");
+
+    // arms
+    if (!interacting) {
+      rect(ctx, cx - 7, y + 13 + aSwing, 3, 7, hd[0]);
+      px(ctx, cx - 7, y + 19 + aSwing, sk[1]);
+      px(ctx, cx - 6, y + 19 + aSwing, sk[1]);
+      rect(ctx, cx + 5, y + 13 - aSwing, 3, 7, hd[2]);
+      px(ctx, cx + 5, y + 19 - aSwing, sk[1]);
+      px(ctx, cx + 6, y + 19 - aSwing, sk[1]);
+      px(ctx, cx + 7, y + 13 - aSwing, PAL.hoodieRim);
+    } else {
+      // both arms raised toward terminal
+      rect(ctx, cx - 7, y + 5, 3, 13, hd[0]);
+      px(ctx, cx - 7, y + 4, sk[1]);
+      px(ctx, cx - 6, y + 4, sk[1]);
+      rect(ctx, cx + 5, y + 5, 3, 13, hd[2]);
+      px(ctx, cx + 5, y + 4, sk[1]);
+      px(ctx, cx + 6, y + 4, sk[1]);
+      px(ctx, cx + 7, y + 5, PAL.hoodieRim);
+    }
+
     // torso / hoodie
-    rect(ctx, cx - 4, y + 9, 9, 10, hd[1]);
-    rect(ctx, cx - 4, y + 9, 9, 3, hd[2]); // lit top
-    rect(ctx, cx - 4, y + 9, 2, 10, hd[0]); // shaded left
-    // rim light down the right edge so the figure separates from dark facade
-    rect(ctx, cx + 4, y + 9, 1, 10, PAL.hoodieRim);
-    // chest emblem (cyan privacy sigil) — a clear focal accent
-    px(ctx, cx, y + 13, PAL.neonCyan);
-    px(ctx, cx + 1, y + 12, "#bff6ff");
-    px(ctx, cx + 1, y + 14, PAL.neonCyan);
-    // hood collar
-    rect(ctx, cx - 3, y + 7, 7, 3, hd[2]);
-    // arms swinging
-    rect(ctx, cx - 5, y + 10 + Math.round(armPhase), 2, 7, hd[0]);
-    rect(ctx, cx + 5, y + 10 - Math.round(armPhase), 2, 7, hd[2]);
-    px(ctx, cx + 6, y + 10 - Math.round(armPhase), PAL.hoodieRim); // arm rim
-    // hands
-    px(ctx, cx - 5, y + 17 + Math.round(armPhase), sk[1]);
-    px(ctx, cx + 6, y + 17 - Math.round(armPhase), sk[1]);
-    // head
-    rect(ctx, cx - 3, y + 1, 7, 7, sk[0]);
-    rect(ctx, cx - 3, y + 1, 7, 2, sk[1]); // brow shade
-    rect(ctx, cx - 3, y + 1, 2, 7, sk[1]);
-    // hair / hood over head
-    rect(ctx, cx - 4, y, 9, 3, hr[0]);
-    rect(ctx, cx - 4, y, 2, 5, hr[1]);
-    rect(ctx, cx + 3, y, 2, 5, hr[1]);
-    // eye glint (cyber visor) — brighter + wider so the head reads
-    rect(ctx, cx, y + 4, 3, 1, PAL.neonCyan);
-    px(ctx, cx + 1, y + 4, "#e6ffff");
+    rect(ctx, cx - 5, y + 12, 11, 10, hd[1]);
+    rect(ctx, cx - 5, y + 12, 2, 10, hd[0]);
+    rect(ctx, cx - 5, y + 12, 11, 3, hd[2]);
+    // 2px bright rim on right — critical separation from dark facades
+    rect(ctx, cx + 5, y + 12, 1, 10, PAL.hoodieRim);
+    rect(ctx, cx + 4, y + 12, 1, 10, hd[2]);
+    // chest privacy sigil — 5-pixel cross
+    px(ctx, cx, y + 15, PAL.neonCyan);
+    px(ctx, cx - 1, y + 16, PAL.neonCyan);
+    px(ctx, cx, y + 16, "#d0ffff");
+    px(ctx, cx + 1, y + 16, PAL.neonCyan);
+    px(ctx, cx, y + 17, PAL.neonCyan);
+
+    // collar / cowl (wider than torso to suggest hooded shape)
+    rect(ctx, cx - 5, y + 9, 11, 4, hd[2]);
+    rect(ctx, cx - 6, y + 10, 2, 5, hd[0]);
+    rect(ctx, cx + 5, y + 10, 2, 5, hd[2]);
+    px(ctx, cx + 6, y + 11, PAL.hoodieRim);
+    px(ctx, cx + 6, y + 12, PAL.hoodieRim);
+
+    // head — hood arch behind face (dark, 11px wide, wider than face)
+    rect(ctx, cx - 4, y + 0, 9, 4, hr[0]);
+    rect(ctx, cx - 5, y + 1, 2, 8, hr[1]);
+    rect(ctx, cx + 4, y + 1, 2, 8, hr[1]);
+    // face — warm skin, high brightness to pop against cool neon
+    rect(ctx, cx - 3, y + 2, 7, 7, sk[0]);
+    rect(ctx, cx - 3, y + 2, 2, 7, sk[1]);
+    rect(ctx, cx - 3, y + 2, 7, 2, sk[1]);
+    // cyber visor — the defining facial feature; must read at smallest zoom
+    rect(ctx, cx - 2, y + 5, 6, 2, PAL.neonCyan);
+    px(ctx, cx - 1, y + 5, "#b0f4ff");
+    px(ctx, cx, y + 5, "#ffffff");
+    px(ctx, cx + 1, y + 5, "#b0f4ff");
+    // chin shadow
+    rect(ctx, cx - 2, y + 8, 5, 1, sk[1]);
   };
 
   // frame 0: idle
-  draw(0, 0, 0, 1);
-  // walk frames 1..4
-  const phases = [
-    [3, 1.5], [0, 0], [-3, -1.5], [0, 0],
-  ];
+  draw(0 * FW, 0, 0, 1, false);
+  // walk frames 1–4 with ±4px stride and ±2px arm counter-swing
+  const walkPhases = [[4, 2], [2, 1], [-4, -2], [-2, -1]];
   for (let i = 0; i < 4; i++) {
-    draw((i + 1) * FW, phases[i][0], phases[i][1], i % 2 === 0 ? 0 : 1);
+    draw((i + 1) * FW, walkPhases[i][0], walkPhases[i][1], i % 2 === 0 ? 0 : 1, false);
   }
-  // frame 5: interact (arms up to terminal)
-  draw(5 * FW, 0, -3, 0);
+  // frame 5: jump / airborne
+  draw(5 * FW, -2, -3, 0, false);
+  // frame 6: interact (both arms raised to terminal height)
+  draw(6 * FW, 0, 0, 0, true);
 
-  // baked dark silhouette of every frame, for a 1px runtime outline that
-  // separates the protagonist from the brick facade (Fitts/figure-ground).
+  // baked dark silhouette for the 1px runtime outline pass
   const sil = makeCanvas(FW * frames, FH);
   sil.ctx.drawImage(c, 0, 0);
   sil.ctx.globalCompositeOperation = "source-in";
@@ -717,6 +751,37 @@ export function buildKiosk() {
   // feet
   rect(ctx, 4, 36, 4, 2, "#0f131d");
   rect(ctx, 18, 36, 4, 2, "#0f131d");
+  return c;
+}
+
+// ---- Wall-mounted data terminal (quests 2–4; distinct from broker kiosk) ---
+// 22×30 sprite: mounting brackets, panel body, screen readout, keyboard strip.
+export function buildTerminal(accentColor) {
+  const { c, ctx } = makeCanvas(22, 30);
+  // mounting brackets (top + bottom bars)
+  rect(ctx, 1, 0, 20, 2, "#1b2030");
+  rect(ctx, 1, 28, 20, 2, "#1b2030");
+  // panel body
+  rect(ctx, 2, 2, 18, 26, "#161c2e");
+  rect(ctx, 2, 2, 18, 1, "#2c3448");   // lit top edge
+  rect(ctx, 2, 2, 1, 26, "#0f131d");   // left shadow
+  rect(ctx, 19, 2, 1, 26, "#0f131d");  // right shadow
+  // screen recess
+  rect(ctx, 4, 5, 14, 11, "#060e1a");
+  rect(ctx, 5, 6, 12, 9, "#0a1e2c");
+  // scanlines
+  for (let y = 6; y < 15; y += 2) rect(ctx, 5, y, 12, 1, "rgba(52,231,255,0.08)");
+  // data readout lines
+  rect(ctx, 6, 7, 7, 1, accentColor);
+  rect(ctx, 6, 10, 5, 1, "#1d4a5e");
+  rect(ctx, 6, 13, 8, 1, "#13263a");
+  // keyboard strip
+  rect(ctx, 4, 18, 14, 4, "#10141e");
+  for (let kx = 5; kx < 17; kx += 2) rect(ctx, kx, 19, 1, 2, "#1a2030");
+  // status LEDs
+  px(ctx, 9,  24, accentColor);
+  px(ctx, 11, 24, accentColor);
+  px(ctx, 13, 24, "#24305c");
   return c;
 }
 

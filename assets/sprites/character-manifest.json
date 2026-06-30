@@ -1,0 +1,47 @@
+{
+  "name": "character",
+  "description": "Privacy operative — teal hoodie, cyber visor, Phase 1 art",
+  "frameWidth": 20,
+  "frameHeight": 32,
+  "frameCount": 7,
+  "scale": 1.3,
+  "palette": {
+    "outline": "#04050c",
+    "skin": "#e7b58c",
+    "hoodie": "#2f8f86",
+    "hoodieRim": "#7df6e4",
+    "pants": "#2a2f45",
+    "visor": "#34e7ff"
+  },
+  "animations": {
+    "idle": {
+      "frames": [0],
+      "fps": 2,
+      "loop": true
+    },
+    "walk": {
+      "frames": [1, 2, 3, 4],
+      "fps": 8,
+      "loop": true
+    },
+    "jump": {
+      "frames": [5],
+      "fps": 1,
+      "loop": false
+    },
+    "interact": {
+      "frames": [6],
+      "fps": 1,
+      "loop": false
+    }
+  },
+  "silhouetteOutlinePixels": 1,
+  "spriteSheet": "character-sheet-20x32x7.png",
+  "notes": [
+    "Generated procedurally in src/art.js buildCharacter()",
+    "At PLAYER_SCALE=1.3: 26x42px on-screen at 480x270 internal res",
+    "Visor (#34e7ff) is the primary readability cue at small scale",
+    "2px cyan rim on right torso edge separates figure from dark facades",
+    "Walk frames use ±4px shoe stride and ±2px arm counter-swing"
+  ]
+}
