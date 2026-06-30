@@ -14,6 +14,7 @@ const WORLD_W = 2200;               // level width (Phase 0 slice)
 const GROUND_Y = 210;               // y of sidewalk top in world space
 const GRAV = 0.5, MOVE = 1.6, JUMP = 7.4, FRICTION = 0.8;
 const CFH = 26;                     // character frame height
+const WALL_H = 40;                  // Phase 1: wall-detail band above shopRow
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -29,8 +30,9 @@ function buildAssets() {
   A.far = art.buildSkyline(WORLD_W * 0.5, 150, { palette: art.PAL.farTower, seed: 11, density: 0.5, litChance: 0.25, warm: false });
   A.mid = art.buildSkyline(WORLD_W * 0.7, 170, { palette: art.PAL.midTower, seed: 23, density: 0.6, litChance: 0.4, warm: true });
   A.near = art.buildSkyline(WORLD_W, 200, { palette: art.PAL.nearWall, seed: 37, density: 0.55, litChance: 0.62, warm: true });
-  A.shops = art.buildShopRow(WORLD_W, 48);   // continuous lit street-level wall
-  A.fg = art.buildForeground(WORLD_W, 48);    // foreground furniture silhouettes
+  A.shops = art.buildShopRow(WORLD_W, 48);      // continuous lit street-level wall
+  A.wallDetails = art.buildWallDetails(WORLD_W, WALL_H); // Phase 1: wall face above shopRow
+  A.fg = art.buildForeground(WORLD_W, 48);     // foreground furniture silhouettes
   A.street = art.buildStreet(WORLD_W, 60);
   A.lamp = art.buildLamp();
   A.fog = art.buildFog(VW, VH);
@@ -277,6 +279,8 @@ function render() {
   drawLayer(A.far, 0.18, VH - 150 - 12);
   drawLayer(A.mid, 0.38, VH - 170 + 4);
   drawLayer(A.near, 0.62, VH - 200 + 18);
+  // Phase 1: upper building wall face (surveillance cams, conduit, signage)
+  drawLayer(A.wallDetails, 0.62, GROUND_Y - SHOP_H - WALL_H);
   // continuous lit storefront wall behind the sidewalk (fills the dead band)
   drawLayer(A.shops, 0.62, GROUND_Y - SHOP_H);
 
@@ -320,6 +324,16 @@ function render() {
   if (!game.quests[0].done) glow(lc, kioskX - game.camX, GROUND_Y - 22, 26, "rgba(52,231,255,0.5)");
   glow(lc, facadeX - game.camX * 0.85 + 140, GROUND_Y - 138, 40, "rgba(255,77,141,0.4)");
   glow(lc, facadeX - game.camX * 0.85 + A.facadeDoorX, GROUND_Y - 16, 30, "rgba(255,200,120,0.4)");
+  // Phase 1: shopfront ambient warm glows every 120px — breaks cyan dominance
+  // with interleaved amber light spill from storefront windows.
+  const shopParallax = 0.62;
+  const shopScrollOff = game.camX * shopParallax;
+  for (let wx = 0; wx < WORLD_W; wx += 120) {
+    const sxp = wx - shopScrollOff;
+    if (sxp > -40 && sxp < VW + 40) {
+      glow(lc, sxp + 14, GROUND_Y - SHOP_H * 0.4, 22, "rgba(212,132,26,0.18)");
+    }
+  }
 
   ctx.globalCompositeOperation = "lighter";
   ctx.drawImage(lightBuf.c, 0, 0);
@@ -434,6 +448,7 @@ function drawTitle() {
   drawLayer(A.far, 0.18, VH - 150 - 12);
   drawLayer(A.mid, 0.3, VH - 170 + 4);
   drawLayer(A.near, 0.5, VH - 200 + 18);
+  drawLayer(A.wallDetails, 0.5, GROUND_Y - SHOP_H - WALL_H);
   drawLayer(A.shops, 0.5, GROUND_Y - SHOP_H);
   ctx.drawImage(A.street, -game.camX, GROUND_Y);
   const fx = facadeX - game.camX * 0.85;

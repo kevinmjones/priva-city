@@ -68,6 +68,12 @@ export const PAL = {
   // foreground street furniture silhouettes
   fg: ["#04050c", "#080b16", "#0d1322"],
   fgRim: "rgba(120,150,210,0.4)",
+  // Phase 1 warm accent tokens — break cyan/magenta fatigue
+  warmAmber: "#d4841a",   // primary warm accent; ~180° from cyan
+  warmGold: "#f5a623",    // bright warm highlight for signage
+  warmRust: "#9a3f1a",    // warm shadow depth
+  neonOrange: "#ff7b30",  // surveillance warning indicator
+  tealDark: "#0d2532",    // low-saturation teal (midground alternative to pure cyan)
 };
 
 function pick(rand, arr) { return arr[(rand() * arr.length) | 0]; }
@@ -341,27 +347,119 @@ export function buildShopRow(w, h) {
   return c;
 }
 
+// ---- Midground wall-detail band (Phase 1 density pass) --------------------
+// A 40px strip that sits ABOVE the shopRow at the same 0.62 parallax, showing
+// the upper building face: surveillance cameras, conduit runs, neon signage,
+// and wall-mounted environmental props. Together with shopRow this makes a
+// continuous 88px deep building facade band from y=122 to y=210.
+export function buildWallDetails(w, h) {
+  const { c, ctx } = makeCanvas(w, h);
+  const rand = rng(83);
+
+  // dark wall base — same family as shopWall, seamless join at bottom edge
+  rect(ctx, 0, 0, w, h, PAL.shopWall[2]);
+  for (let y = 2; y < h; y += 4) {
+    for (let x = (y % 8 ? 0 : 4); x < w; x += 8) {
+      rect(ctx, x, y, 7, 3, pick(rand, PAL.shopWall));
+    }
+  }
+  // dark lower edge blends into shopRow top
+  rect(ctx, 0, h - 3, w, 3, "#0c0e16");
+  // subtle upper shadow from the overhanging building mass above
+  rect(ctx, 0, 0, w, 2, "rgba(0,0,0,0.55)");
+
+  // surveillance cameras — mounted to wall, pointing down/outward
+  // 1 in 3 chance of warm-lit, rest are cool surveillance blue
+  for (let x = 14; x < w; x += 88 + ((rand() * 44) | 0)) {
+    if (rand() > 0.2) {
+      const warm = rand() > 0.55;
+      rect(ctx, x, h - 20, 2, 10, "#1b1e29");          // mounting bracket
+      rect(ctx, x + 2, h - 22, 12, 5, "#1b1e29");      // camera body
+      rect(ctx, x + 2, h - 22, 12, 1, "#2b3142");      // top highlight
+      rect(ctx, x + 2, h - 22, 2, 5, "#2b3142");       // left edge highlight
+      rect(ctx, x + 13, h - 21, 3, 3, "#0d1120");      // lens
+      px(ctx, x + 3, h - 21, warm ? PAL.warmAmber : PAL.neonCyan);  // status LED
+      if (rand() > 0.5) px(ctx, x + 14, h - 21, warm ? PAL.warmGold : PAL.tealDark); // iris
+    }
+  }
+
+  // horizontal conduit bundles (2-3 tubes running along the wall)
+  for (let x = 0; x < w; x += 100 + ((rand() * 60) | 0)) {
+    const cy = 6 + ((rand() * (h - 22)) | 0);
+    rect(ctx, x, cy, 3 + ((rand() * 60) | 0), 2, "#15171f");      // main conduit
+    rect(ctx, x, cy, 3 + ((rand() * 60) | 0), 1, "#2b3142");      // highlight
+    if (rand() > 0.5) {
+      rect(ctx, x, cy + 3, 2 + ((rand() * 40) | 0), 2, "#15171f"); // secondary run
+    }
+    // junction bracket
+    rect(ctx, x + ((rand() * 20) | 0), cy - 1, 4, 4, "#1b1e29");
+  }
+
+  // neon signage strips — warm amber dominant with occasional cool teal
+  for (let x = 16; x < w; x += 110 + ((rand() * 80) | 0)) {
+    if (rand() > 0.35) {
+      const warm = rand() > 0.3;          // 70% warm, 30% cool = palette shift
+      const sw = 22 + ((rand() * 28) | 0);
+      const sy = 4 + ((rand() * (h - 18)) | 0);
+      rect(ctx, x, sy, sw, 5, "#0a0c18");                           // mounting board
+      rect(ctx, x, sy, sw, 1, warm ? PAL.warmAmber : PAL.neonCyan); // neon top edge
+      rect(ctx, x, sy + 4, sw, 1, warm ? PAL.warmRust : PAL.tealDark); // base shadow
+      if (rand() > 0.5) {
+        px(ctx, x + (sw / 2) | 0, sy + 2, warm ? PAL.warmGold : "#7fd4ff");
+        px(ctx, x + ((sw / 2) | 0) + 2, sy + 2, warm ? PAL.warmAmber : PAL.neonCyan);
+      }
+    }
+  }
+
+  // wall poster/sticker clusters (environmental storytelling texture)
+  for (let x = 30; x < w; x += 130 + ((rand() * 100) | 0)) {
+    if (rand() > 0.4) {
+      const pw = 9 + ((rand() * 12) | 0), ph = 7 + ((rand() * 7) | 0);
+      const py = 4 + ((rand() * (h - ph - 6)) | 0);
+      rect(ctx, x, py, pw, ph, pick(rand, PAL.shopWall));           // poster body
+      rect(ctx, x, py, pw, 2, "#1d2430");                           // poster header
+      rect(ctx, x, py, 1, ph, "#242a38");                           // torn edge
+      if (rand() > 0.5) rect(ctx, x + 2, py + 4, pw - 4, 1, PAL.warmAmber); // text line
+      if (rand() > 0.6) rect(ctx, x + 2, py + 6, pw - 6, 1, "#1a3a50");      // second line
+    }
+  }
+
+  // AC unit vents along upper face
+  for (let x = 50; x < w; x += 160 + ((rand() * 100) | 0)) {
+    if (rand() > 0.45) {
+      const ax = x, ay = 2;
+      rect(ctx, ax, ay, 14, 8, "#23283a");
+      rect(ctx, ax, ay, 14, 1, "#3a4258");
+      for (let i = ax + 1; i < ax + 13; i += 2) rect(ctx, i, ay + 2, 1, 4, "#11141d");
+      rect(ctx, ax, ay + 7, 14, 1, "#15171f");
+    }
+  }
+
+  return c;
+}
+
 // ---- Foreground street-furniture silhouette band ---------------------------
-// The closest parallax layer: a near-black silhouette of railing + clutter that
-// streaks past faster than the facade, giving the scene layered depth like the
-// target. Kept low so it never occludes the protagonist above the shins.
+// Phase 1: expanded prop library (11 types) at ~2× denser spacing so the full
+// 2200px level never reads empty while scrolling. Surveillance cams, data
+// terminals, ad pillars and warning barriers add environmental storytelling.
+// Kept low (≤30px) so it never occludes the protagonist above the shins.
 export function buildForeground(w, h) {
   const { c, ctx } = makeCanvas(w, h);
   const rand = rng(impureSeed(w));
-  const base = h; // props stand on the bottom edge
+  const base = h;
   const sil = PAL.fg[0];
 
-  // continuous low railing across the band
+  // continuous low railing
   const railY = h - 16;
-  rect(ctx, 0, railY, w, 2, PAL.fg[1]);            // top rail
-  rect(ctx, 0, railY, w, 1, PAL.fgRim);            // rim highlight
-  for (let x = 4; x < w; x += 7) rect(ctx, x, railY, 2, 16, sil); // balusters
-  rect(ctx, 0, h - 3, w, 3, PAL.fg[0]);            // pavement lip
+  rect(ctx, 0, railY, w, 2, PAL.fg[1]);
+  rect(ctx, 0, railY, w, 1, PAL.fgRim);
+  for (let x = 4; x < w; x += 7) rect(ctx, x, railY, 2, 16, sil);
+  rect(ctx, 0, h - 3, w, 3, PAL.fg[0]);
 
-  // scattered street furniture — all anchored to the bottom, <= ~30px tall
-  let x = 30 + ((rand() * 40) | 0);
-  while (x < w - 30) {
-    const t = (rand() * 5) | 0;
+  // tighter spacing: 38–86px avg ~62px → ~35 props in 2200px (was ~18)
+  let x = 22 + ((rand() * 30) | 0);
+  while (x < w - 22) {
+    const t = (rand() * 11) | 0;
     if (t === 0) {
       // fire hydrant
       rect(ctx, x, base - 14, 5, 14, sil);
@@ -374,7 +472,7 @@ export function buildForeground(w, h) {
       rect(ctx, x - 1, base - 18, 14, 2, PAL.fg[1]);
       rect(ctx, x, base - 18, 1, 18, PAL.fgRim);
     } else if (t === 2) {
-      // planter hedge (low, dark — not a bright green band)
+      // planter hedge
       rect(ctx, x, base - 9, 20, 9, sil);
       for (let i = 0; i < 20; i += 3) rect(ctx, x + i, base - 13, 2, 5, "#0c2418");
       px(ctx, x + 4, base - 13, "#1a5236");
@@ -383,14 +481,69 @@ export function buildForeground(w, h) {
       rect(ctx, x, base - 22, 10, 22, sil);
       rect(ctx, x + 2, base - 18, 6, 6, "#10131d");
       rect(ctx, x, base - 22, 1, 22, PAL.fgRim);
-    } else {
+    } else if (t === 4) {
       // bollard pair
       rect(ctx, x, base - 11, 3, 11, sil);
       rect(ctx, x + 8, base - 11, 3, 11, sil);
       px(ctx, x, base - 11, PAL.fgRim);
       px(ctx, x + 8, base - 11, PAL.fgRim);
+    } else if (t === 5) {
+      // surveillance camera post — warm amber status LED, environmental story
+      rect(ctx, x + 1, base - 26, 2, 26, sil);          // pole
+      rect(ctx, x + 3, base - 26, 10, 2, sil);          // arm
+      rect(ctx, x + 11, base - 26, 8, 5, sil);          // camera body
+      rect(ctx, x + 11, base - 26, 8, 1, PAL.fg[1]);    // top highlight
+      rect(ctx, x + 18, base - 25, 2, 3, "#0d1020");    // lens
+      px(ctx, x + 12, base - 25, PAL.warmAmber);        // status LED warm
+      px(ctx, x + 12, base - 24, PAL.neonOrange);       // warning glow dot
+    } else if (t === 6) {
+      // utility junction box on post
+      rect(ctx, x + 2, base - 24, 2, 24, sil);          // post
+      rect(ctx, x, base - 22, 14, 10, sil);             // box
+      rect(ctx, x, base - 22, 14, 1, PAL.fg[1]);        // top rim
+      rect(ctx, x, base - 22, 1, 10, PAL.fgRim);        // side rim
+      rect(ctx, x + 3, base - 18, 4, 3, "#0d1120");     // panel recess
+      px(ctx, x + 4, base - 17, PAL.warmAmber);         // status light
+      px(ctx, x + 10, base - 17, PAL.neonCyan);         // data indicator
+    } else if (t === 7) {
+      // warning barrier — warm amber band breaks cool palette
+      rect(ctx, x, base - 14, 2, 14, sil);              // left post
+      rect(ctx, x + 14, base - 14, 2, 14, sil);         // right post
+      rect(ctx, x, base - 12, 16, 3, PAL.warmRust);     // amber danger stripe
+      rect(ctx, x, base - 12, 16, 1, PAL.warmAmber);    // bright top edge
+      rect(ctx, x + 4, base - 10, 3, 1, PAL.warmGold);  // highlight pip
+    } else if (t === 8) {
+      // holographic ad pillar — tall, glowing display
+      rect(ctx, x + 3, base - 30, 2, 30, sil);          // post
+      rect(ctx, x - 4, base - 30, 18, 14, "#0a0c18");   // panel frame
+      rect(ctx, x - 3, base - 29, 16, 12, PAL.tealDark);// screen
+      rect(ctx, x - 3, base - 29, 16, 2, "#1a3a4e");    // scan line
+      rect(ctx, x - 2, base - 24, 8, 1, PAL.neonCyan);  // data bar
+      rect(ctx, x - 2, base - 21, 5, 1, PAL.warmAmber); // warm text line
+      px(ctx, x + 8, base - 18, PAL.warmGold);          // accent pixel
+      rect(ctx, x - 4, base - 30, 18, 1, "#1a4a5e");    // top border glow
+    } else if (t === 9) {
+      // street bench with backrest
+      rect(ctx, x + 2, base - 12, 2, 12, sil);          // left leg
+      rect(ctx, x + 14, base - 12, 2, 12, sil);         // right leg
+      rect(ctx, x, base - 9, 18, 2, sil);               // seat
+      rect(ctx, x, base - 9, 18, 1, PAL.fgRim);         // seat rim
+      rect(ctx, x + 2, base - 14, 14, 1, PAL.fg[1]);    // backrest
+      rect(ctx, x + 2, base - 14, 1, 5, PAL.fgRim);     // backrest post L
+      rect(ctx, x + 14, base - 14, 1, 5, PAL.fgRim);    // backrest post R
+    } else {
+      // bike rack — U-shape with suggestion of parked bike
+      rect(ctx, x, base - 18, 2, 18, sil);              // left post
+      rect(ctx, x + 10, base - 18, 2, 18, sil);         // right post
+      rect(ctx, x, base - 18, 12, 2, sil);              // crossbar
+      rect(ctx, x, base - 18, 12, 1, PAL.fgRim);        // crossbar rim
+      // bike silhouette suggestion (wheel circles as dark ovals)
+      rect(ctx, x - 2, base - 12, 5, 8, sil);           // front wheel
+      rect(ctx, x - 1, base - 11, 3, 6, "#080b16");     // wheel hollow
+      rect(ctx, x + 9, base - 12, 5, 8, sil);           // rear wheel
+      rect(ctx, x + 10, base - 11, 3, 6, "#080b16");
     }
-    x += 70 + ((rand() * 90) | 0);
+    x += 38 + ((rand() * 48) | 0);
   }
   return c;
 }
@@ -419,16 +572,37 @@ export function buildStreet(w, h) {
   }
   // expansion gutter line lower down
   rect(ctx, 0, h - 10, w, 1, "rgba(0,0,0,0.35)");
-  // manholes + puddle reflections
+  // manholes + puddle reflections — Phase 1: mix warm amber with cool teal
+  // so the street reads as wet without full cyan fatigue.
   for (let i = 0; i < w / 130; i++) {
     const px0 = (rand() * w) | 0;
     rect(ctx, px0, 8, 12, 6, "#10131d");
     rect(ctx, px0, 8, 12, 1, "#23283a");
+    rect(ctx, px0 + 3, 10, 6, 1, "#2b3040");  // grate cross detail
+    rect(ctx, px0, 11, 12, 1, "#2b3040");
+    // alternate puddle reflection color — ~half warm amber, ~half cool teal
+    const warmPuddle = rand() > 0.5;
     const pg = ctx.createLinearGradient(0, 14, 0, h - 6);
-    pg.addColorStop(0, "rgba(90,130,210,0.16)");
-    pg.addColorStop(1, "rgba(90,130,210,0)");
+    if (warmPuddle) {
+      pg.addColorStop(0, "rgba(210,132,26,0.18)");   // warm amber reflection
+      pg.addColorStop(0.5, "rgba(180,100,20,0.08)");
+      pg.addColorStop(1, "rgba(150,80,10,0)");
+    } else {
+      pg.addColorStop(0, "rgba(52,231,255,0.12)");   // cool teal (reduced from 0.16)
+      pg.addColorStop(0.5, "rgba(40,180,210,0.06)");
+      pg.addColorStop(1, "rgba(30,130,170,0)");
+    }
     ctx.fillStyle = pg;
     ctx.fillRect(px0 - 18, 14, 40, h - 20);
+  }
+  // neon spill strips along paving slab seams (lamp reflections)
+  for (let x = 20; x < w; x += 40) {
+    if (rand() > 0.65) {
+      const spillCol = rand() > 0.45
+        ? "rgba(212,132,26,0.10)"   // warm amber lamp spill
+        : "rgba(52,231,255,0.07)";  // teal kiosk spill
+      rect(ctx, x, h - 8, 2, 4, spillCol);
+    }
   }
   return c;
 }
