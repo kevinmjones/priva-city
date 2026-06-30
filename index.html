@@ -2,60 +2,77 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Priva-city</title>
-    <meta name="description" content="A playable privacy CTF prototype from OT Labs." />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#070a20" />
+    <title>Priva-city — neon privacy CTF</title>
+    <meta name="description" content="Priva-city: a pixel-art privacy CTF from OT Labs. Take down data brokers in a neon night city." />
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   </head>
   <body>
-    <main id="shell">
-      <section id="game-wrap" aria-label="Priva-city game">
-        <div id="game"></div>
-        <div id="hud">
-          <div class="brand">
-            <span class="mark"></span>
-            <div>
-              <strong>PRIVA-CITY</strong>
-              <span>Trust restoration protocol</span>
-            </div>
-          </div>
-          <div class="meters">
-            <span><b>Time</b><span id="timer">00:00</span></span>
-            <span><b>Code</b><span id="code-slots">-- -- --</span></span>
-            <span><b>Sigils</b><span id="sigils">0/4</span></span>
-          </div>
-        </div>
-        <aside id="quest-log" aria-live="polite">
-          <h1>Main Quest</h1>
-          <ol id="quest-list"></ol>
-          <h2>Side Quest</h2>
-          <p id="side-quest">Find the four consent sigils hidden around Priva-city.</p>
-        </aside>
-        <div id="hint" aria-live="polite">
-          <span id="promptText"></span>
-          <span id="controlHelp">Move <kbd>A</kbd><kbd>D</kbd> or arrows · Jump <kbd>Space</kbd> · Interact <kbd>E</kbd></span>
-        </div>
-        <div id="touch-controls" aria-label="Touch controls">
-          <div class="touch-pad">
-            <button type="button" data-touch="left" aria-label="Move left">←</button>
-            <button type="button" data-touch="right" aria-label="Move right">→</button>
-          </div>
-          <div class="touch-actions">
-            <button type="button" data-touch="jump" aria-label="Jump">↑</button>
-            <button type="button" data-touch="interact" aria-label="Interact">E</button>
-          </div>
+    <div id="stage">
+      <canvas id="game" width="480" height="270" aria-label="Priva-city game viewport"></canvas>
+
+      <!-- TITLE SCREEN -->
+      <section id="titleScreen">
+        <div class="title-inner">
+          <h1 class="logo">PRIVA<span>·</span>CITY</h1>
+          <p class="tagline">Take back the night. Take back your data.</p>
+          <button id="startBtn" class="cta">▶ START</button>
+          <p class="controls-hint">
+            Move <kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> &nbsp;·&nbsp;
+            Jump <kbd>Space</kbd> &nbsp;·&nbsp; Interact <kbd>E</kbd>
+          </p>
+          <p class="byline">A privacy CTF prototype · OT Labs</p>
         </div>
       </section>
-    </main>
 
-    <dialog id="modal">
-      <form method="dialog">
-        <button id="close-modal" value="cancel" aria-label="Close">×</button>
-      </form>
-      <div id="modal-body"></div>
-    </dialog>
+      <!-- IN-GAME HUD -->
+      <div id="hud" class="hidden">
+        <div class="hud-brand">
+          <span class="hud-mark"></span>
+          <div><strong>PRIVA-CITY</strong><span>Data Broker District</span></div>
+        </div>
+        <aside id="questLog">
+          <h2>MAIN QUEST</h2>
+          <ul id="questList"></ul>
+          <div class="sigils">CONSENT SIGILS <b id="sigilCount">0/4</b></div>
+        </aside>
+        <button id="muteBtn" class="mute">♪ on</button>
+        <div id="interactPrompt"><kbd>E</kbd> Interact</div>
+        <div id="controlBar">
+          <span><kbd>A</kbd><kbd>D</kbd> Move</span>
+          <span><kbd>Space</kbd> Jump</span>
+          <span><kbd>E</kbd> Interact</span>
+        </div>
+        <div id="touch">
+          <div class="t-left">
+            <button id="btnLeft" aria-label="Left">‹</button>
+            <button id="btnRight" aria-label="Right">›</button>
+          </div>
+          <div class="t-right">
+            <button id="btnJump" aria-label="Jump">▲</button>
+            <button id="btnInteract" aria-label="Interact">E</button>
+          </div>
+        </div>
+      </div>
 
-    <script src="src/game.js"></script>
+      <!-- PUZZLE OVERLAY -->
+      <div id="puzzle" class="hidden">
+        <div class="pz-card">
+          <div id="puzzleBody"></div>
+        </div>
+      </div>
+
+      <!-- WIN SCREEN -->
+      <section id="winScreen" class="hidden">
+        <div class="title-inner">
+          <h1 class="logo win">DISTRICT<br />SECURED</h1>
+          <p class="tagline">The broker node is dark. Consent restored.</p>
+          <p class="byline">Phase 0 vertical slice · press <kbd>Enter</kbd> to replay</p>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="src/game.js"></script>
   </body>
 </html>

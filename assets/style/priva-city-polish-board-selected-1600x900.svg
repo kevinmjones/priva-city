@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Priva-city selected polish board</title>
+  <desc id="desc">Pixel-art cyberpunk side-scroller visual reference for Priva-city.</desc>
+  <style>
+    .px { shape-rendering: crispEdges; }
+    .label { font-family: monospace; font-size: 22px; font-weight: 700; letter-spacing: 0; fill: #ffc76d; }
+    .small { font-family: monospace; font-size: 15px; font-weight: 700; letter-spacing: 0; fill: #f4f1d6; }
+    .tiny { font-family: monospace; font-size: 12px; font-weight: 700; letter-spacing: 0; fill: #f4f1d6; }
+  </style>
+  <rect class="px" width="1600" height="900" fill="#030711"/>
+  <rect class="px" y="0" width="1600" height="760" fill="#07122a"/>
+
+  <g class="px" opacity="0.55">
+    <path d="M0 275h90v35h55v-75h90v100h70v-155h95v120h65v-55h85v115h90v-210h130v170h60v-100h120v135h70v-70h85v120h105v-250h125v190h95v-90h100v405H0z" fill="#102a63"/>
+    <path d="M0 345h80v140h80v-95h55v80h90v-160h100v100h95v-60h80v110h110v-95h105v95h95v-70h75v120h95v-160h110v125h100v-75h85v360H0z" fill="#183b82"/>
+    <path d="M85 260c55-40 110-35 165 0 50-50 115-52 170-6 40-28 80-30 120-5 58-43 119-39 180 4v80H85z" fill="#1a326d"/>
+    <path d="M930 265c50-42 110-42 180 0 46-41 100-42 160-2 50-32 104-30 164 5v75H930z" fill="#1a326d"/>
+  </g>
+
+  <g class="px" fill="#02050e">
+    <rect x="0" y="0" width="82" height="760"/>
+    <rect x="250" y="0" width="110" height="760"/>
+    <rect x="620" y="0" width="80" height="760"/>
+    <rect x="995" y="0" width="125" height="760"/>
+    <rect x="1302" y="0" width="86" height="760"/>
+  </g>
+
+  <g class="px" opacity="0.85">
+    <rect x="105" y="510" width="160" height="12" fill="#264d9b"/>
+    <rect x="105" y="540" width="160" height="10" fill="#264d9b"/>
+    <rect x="1262" y="260" width="54" height="8" fill="#264d9b"/>
+    <rect x="1262" y="282" width="54" height="8" fill="#264d9b"/>
+    <rect x="1262" y="304" width="54" height="8" fill="#264d9b"/>
+    <rect x="190" y="380" width="10" height="95" fill="#264d9b"/>
+    <rect x="376" y="228" width="120" height="7" fill="#264d9b"/>
+    <rect x="376" y="252" width="120" height="7" fill="#264d9b"/>
+  </g>
+
+  <g class="px">
+    <rect x="410" y="555" width="575" height="42" fill="#6f6c9f"/>
+    <rect x="432" y="597" width="525" height="178" fill="#07172f"/>
+    <rect x="432" y="597" width="525" height="178" fill="none" stroke="#12376f" stroke-width="6"/>
+    <g stroke="#12376f" stroke-width="4">
+      <path d="M442 620h500M442 644h500M442 668h500M442 692h500M442 716h500M442 740h500"/>
+      <path d="M468 600v170M518 600v170M568 600v170M618 600v170M668 600v170M718 600v170M768 600v170M818 600v170M868 600v170M918 600v170"/>
+    </g>
+    <rect x="498" y="682" width="82" height="93" fill="#030711" stroke="#264d9b" stroke-width="6"/>
+    <rect x="620" y="675" width="155" height="100" fill="#030711" stroke="#264d9b" stroke-width="6"/>
+    <path d="M665 706l72-28M698 765l60-88" stroke="#6f6c9f" stroke-width="6"/>
+    <rect x="790" y="638" width="82" height="137" fill="#244587" stroke="#6f6c9f" stroke-width="5"/>
+    <rect x="415" y="555" width="560" height="14" fill="#8d73ff" opacity="0.35"/>
+    <rect x="500" y="535" width="300" height="20" fill="#02050e"/>
+    <rect x="840" y="515" width="68" height="40" fill="#02050e"/>
+    <rect x="858" y="492" width="34" height="23" fill="#6f6c9f"/>
+  </g>
+
+  <g class="px">
+    <rect x="1368" y="322" width="220" height="42" fill="#6f6c9f"/>
+    <rect x="1375" y="364" width="205" height="198" fill="#07172f" stroke="#12376f" stroke-width="6"/>
+    <g stroke="#12376f" stroke-width="4">
+      <path d="M1385 388h185M1385 412h185M1385 436h185M1385 460h185M1385 484h185M1385 508h185"/>
+      <path d="M1410 365v190M1460 365v190M1510 365v190M1560 365v190"/>
+    </g>
+    <rect x="1448" y="445" width="128" height="80" fill="#030711" stroke="#264d9b" stroke-width="6"/>
+    <rect x="1410" y="520" width="184" height="34" fill="#8383b8"/>
+    <rect x="1380" y="562" width="210" height="38" fill="#4f4a87"/>
+  </g>
+
+  <g class="px">
+    <rect x="0" y="765" width="1600" height="65" fill="#06132c"/>
+    <rect x="0" y="760" width="1600" height="6" fill="#2c61bd"/>
+    <g fill="#12376f">
+      <rect x="0" y="780" width="16" height="8"/>
+      <rect x="27" y="790" width="14" height="10"/>
+      <rect x="62" y="776" width="12" height="12"/>
+      <rect x="102" y="800" width="22" height="8"/>
+      <rect x="146" y="786" width="14" height="12"/>
+      <rect x="220" y="790" width="16" height="8"/>
+      <rect x="300" y="780" width="22" height="10"/>
+      <rect x="390" y="798" width="16" height="10"/>
+      <rect x="490" y="780" width="28" height="8"/>
+      <rect x="620" y="796" width="18" height="10"/>
+      <rect x="760" y="782" width="22" height="8"/>
+      <rect x="900" y="800" width="16" height="8"/>
+      <rect x="1040" y="780" width="26" height="10"/>
+      <rect x="1210" y="792" width="16" height="12"/>
+      <rect x="1370" y="776" width="18" height="12"/>
+      <rect x="1490" y="798" width="24" height="8"/>
+    </g>
+  </g>
+
+  <g class="px" transform="translate(950 606)">
+    <rect x="10" y="64" width="28" height="90" fill="#101820"/>
+    <rect x="14" y="35" width="20" height="30" fill="#d7b083"/>
+    <rect x="8" y="14" width="32" height="22" fill="#211a16"/>
+    <rect x="4" y="58" width="40" height="70" fill="#6b4b2e"/>
+    <rect x="9" y="68" width="30" height="16" fill="#ffc76d"/>
+    <rect x="2" y="126" width="14" height="26" fill="#211a16"/>
+    <rect x="34" y="126" width="14" height="26" fill="#211a16"/>
+    <rect x="16" y="42" width="5" height="5" fill="#030711"/>
+    <rect x="29" y="42" width="5" height="5" fill="#030711"/>
+    <path d="M0 20h-30v-18h-16v52h16v-18H0z" fill="#ffc76d"/>
+    <rect x="-22" y="14" width="5" height="5" fill="#030711"/>
+    <rect x="-12" y="14" width="5" height="5" fill="#030711"/>
+    <rect x="-2" y="14" width="5" height="5" fill="#030711"/>
+  </g>
+
+  <g class="px">
+    <rect x="12" y="26" width="42" height="42" rx="0" fill="#d8a84f"/>
+    <circle cx="33" cy="47" r="13" fill="none" stroke="#5a3e18" stroke-width="5"/>
+    <text x="78" y="40" class="label">NEON NIGHT DRIVE</text>
+    <text x="78" y="66" class="small">PRIVA-CITY POLISH DIRECTION A</text>
+    <rect x="78" y="88" width="34" height="34" fill="none" stroke="#ffc76d" stroke-width="4"/>
+    <rect x="124" y="88" width="34" height="34" fill="none" stroke="#ffc76d" stroke-width="4"/>
+    <rect x="170" y="88" width="34" height="34" fill="none" stroke="#ffc76d" stroke-width="4"/>
+  </g>
+
+  <g class="px">
+    <rect x="1250" y="28" width="320" height="206" fill="#030711" opacity="0.92"/>
+    <rect x="1250" y="28" width="320" height="206" fill="none" stroke="#102a63" stroke-width="2"/>
+    <text x="1270" y="60" class="small">MAIN QUEST</text>
+    <text x="1270" y="86" class="tiny" fill="#ffc76d">RESTORE TRUST AT 4 LANDMARKS.</text>
+    <g fill="#ffc76d">
+      <rect x="1270" y="112" width="18" height="30"/>
+      <rect x="1302" y="112" width="18" height="30"/>
+      <rect x="1334" y="112" width="18" height="30"/>
+      <rect x="1366" y="112" width="18" height="30"/>
+      <rect x="1398" y="112" width="18" height="30"/>
+      <rect x="1430" y="112" width="18" height="30"/>
+    </g>
+    <text x="1270" y="174" class="small">SIDE QUEST</text>
+    <g fill="none" stroke="#f4f1d6" stroke-width="3">
+      <circle cx="1286" cy="206" r="15"/>
+      <circle cx="1326" cy="206" r="15"/>
+      <circle cx="1366" cy="206" r="15"/>
+      <circle cx="1406" cy="206" r="15"/>
+    </g>
+  </g>
+
+  <g class="px">
+    <rect x="0" y="830" width="1600" height="70" fill="#030711"/>
+    <text x="420" y="872" class="small">A W D MOVE</text>
+    <text x="665" y="872" class="small">SPACE JUMP</text>
+    <text x="895" y="872" class="small">E INTERACT</text>
+  </g>
+
+  <g class="px" opacity="0.9">
+    <rect x="460" y="628" width="60" height="10" fill="#38d98b"/>
+    <rect x="480" y="618" width="8" height="20" fill="#38d98b"/>
+    <rect x="1490" y="304" width="74" height="8" fill="#38d98b"/>
+    <rect x="1510" y="292" width="7" height="18" fill="#38d98b"/>
+    <rect x="1548" y="292" width="7" height="18" fill="#38d98b"/>
+    <rect x="1032" y="548" width="16" height="52" fill="#8d73ff"/>
+    <rect x="1038" y="556" width="5" height="5" fill="#f4f1d6"/>
+    <rect x="1038" y="574" width="5" height="5" fill="#f4f1d6"/>
+  </g>
+</svg>

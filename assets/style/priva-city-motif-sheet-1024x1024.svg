@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Priva-city motif sheet</title>
+  <desc id="desc">Reusable pixel-art motifs for the Priva-city polish pass.</desc>
+  <style>
+    .px { shape-rendering: crispEdges; }
+    .label { font-family: monospace; font-size: 20px; font-weight: 700; letter-spacing: 0; fill: #ffc76d; }
+    .small { font-family: monospace; font-size: 13px; font-weight: 700; letter-spacing: 0; fill: #f4f1d6; }
+  </style>
+  <rect class="px" width="1024" height="1024" fill="#030711"/>
+  <text x="42" y="58" class="label">PRIVA-CITY MOTIF SHEET</text>
+
+  <g class="px" transform="translate(48 104)">
+    <text x="0" y="-20" class="small">BRICK PLATFORM MODULE</text>
+    <rect width="260" height="44" fill="#6f6c9f"/>
+    <rect y="44" width="260" height="142" fill="#07172f" stroke="#12376f" stroke-width="6"/>
+    <g stroke="#12376f" stroke-width="4">
+      <path d="M10 70h240M10 94h240M10 118h240M10 142h240M10 166h240"/>
+      <path d="M30 44v142M80 44v142M130 44v142M180 44v142M230 44v142"/>
+    </g>
+    <rect x="38" y="102" width="56" height="84" fill="#030711" stroke="#264d9b" stroke-width="5"/>
+    <rect x="132" y="88" width="88" height="64" fill="#030711" stroke="#264d9b" stroke-width="5"/>
+    <path d="M148 128l52-32M170 148l46-54" stroke="#6f6c9f" stroke-width="5"/>
+  </g>
+
+  <g class="px" transform="translate(380 104)">
+    <text x="0" y="-20" class="small">CONSENT ARCADE KIOSK</text>
+    <rect x="0" y="56" width="138" height="130" fill="#07172f" stroke="#38d98b" stroke-width="5"/>
+    <rect x="18" y="78" width="102" height="52" fill="#030711" stroke="#264d9b" stroke-width="4"/>
+    <rect x="36" y="96" width="66" height="8" fill="#38d98b"/>
+    <rect x="22" y="146" width="20" height="18" fill="#ffc76d"/>
+    <rect x="54" y="146" width="20" height="18" fill="#8d73ff"/>
+    <rect x="86" y="146" width="20" height="18" fill="#38d98b"/>
+    <rect x="-12" y="34" width="162" height="22" fill="#6f6c9f"/>
+    <rect x="12" y="12" width="112" height="22" fill="#ffc76d"/>
+  </g>
+
+  <g class="px" transform="translate(690 104)">
+    <text x="0" y="-20" class="small">INTERACTION BUBBLE</text>
+    <path d="M0 16h120v70H82v28L54 86H0z" fill="#ffc76d"/>
+    <rect x="22" y="44" width="10" height="10" fill="#030711"/>
+    <rect x="54" y="44" width="10" height="10" fill="#030711"/>
+    <rect x="86" y="44" width="10" height="10" fill="#030711"/>
+  </g>
+
+  <g class="px" transform="translate(48 378)">
+    <text x="0" y="-20" class="small">RIGHTS EXCHANGE WINDOW</text>
+    <rect width="250" height="150" fill="#07172f" stroke="#264d9b" stroke-width="5"/>
+    <rect x="22" y="28" width="88" height="96" fill="#030711" stroke="#6f6c9f" stroke-width="4"/>
+    <rect x="140" y="30" width="76" height="88" fill="#030711" stroke="#264d9b" stroke-width="4"/>
+    <rect x="150" y="44" width="56" height="8" fill="#f4f1d6"/>
+    <rect x="150" y="64" width="46" height="8" fill="#f4f1d6"/>
+    <rect x="150" y="84" width="52" height="8" fill="#f4f1d6"/>
+    <rect x="34" y="42" width="64" height="8" fill="#ffc76d"/>
+  </g>
+
+  <g class="px" transform="translate(380 378)">
+    <text x="0" y="-20" class="small">RETENTION RAIL CONSOLE</text>
+    <rect x="0" y="90" width="250" height="42" fill="#6f6c9f"/>
+    <rect x="20" y="32" width="92" height="58" fill="#07172f" stroke="#ffc76d" stroke-width="5"/>
+    <rect x="36" y="54" width="58" height="8" fill="#ffc76d"/>
+    <rect x="144" y="0" width="54" height="90" fill="#07172f" stroke="#8d73ff" stroke-width="5"/>
+    <rect x="158" y="18" width="26" height="10" fill="#8d73ff"/>
+    <rect x="158" y="42" width="26" height="10" fill="#8d73ff"/>
+    <rect x="158" y="66" width="26" height="10" fill="#8d73ff"/>
+  </g>
+
+  <g class="px" transform="translate(690 378)">
+    <text x="0" y="-20" class="small">TRUST HUB DOOR</text>
+    <rect width="180" height="190" fill="#07172f" stroke="#12376f" stroke-width="6"/>
+    <rect x="46" y="56" width="88" height="134" fill="#244587" stroke="#6f6c9f" stroke-width="5"/>
+    <rect x="112" y="112" width="10" height="10" fill="#ffc76d"/>
+    <g fill="#ffc76d">
+      <rect x="24" y="20" width="18" height="24"/>
+      <rect x="52" y="20" width="18" height="24"/>
+      <rect x="80" y="20" width="18" height="24"/>
+      <rect x="108" y="20" width="18" height="24"/>
+      <rect x="136" y="20" width="18" height="24"/>
+    </g>
+  </g>
+
+  <g class="px" transform="translate(48 670)">
+    <text x="0" y="-20" class="small">HUD QUEST PANEL</text>
+    <rect width="330" height="180" fill="#030711" stroke="#102a63" stroke-width="3"/>
+    <text x="18" y="34" class="small">MAIN QUEST</text>
+    <rect x="18" y="58" width="18" height="30" fill="#ffc76d"/>
+    <rect x="50" y="58" width="18" height="30" fill="#ffc76d"/>
+    <rect x="82" y="58" width="18" height="30" fill="#ffc76d"/>
+    <rect x="114" y="58" width="18" height="30" fill="#ffc76d"/>
+    <rect x="146" y="58" width="18" height="30" fill="#ffc76d"/>
+    <rect x="178" y="58" width="18" height="30" fill="#ffc76d"/>
+    <text x="18" y="126" class="small">SIDE QUEST</text>
+    <g fill="none" stroke="#f4f1d6" stroke-width="3">
+      <circle cx="34" cy="152" r="14"/>
+      <circle cx="74" cy="152" r="14"/>
+      <circle cx="114" cy="152" r="14"/>
+      <circle cx="154" cy="152" r="14"/>
+    </g>
+  </g>
+
+  <g class="px" transform="translate(460 670)">
+    <text x="0" y="-20" class="small">PRIVACY GLYPHS</text>
+    <circle cx="42" cy="52" r="34" fill="none" stroke="#ffc76d" stroke-width="5"/>
+    <path d="M42 24v56M14 52h56" stroke="#38d98b" stroke-width="5"/>
+    <circle cx="142" cy="52" r="34" fill="none" stroke="#8d73ff" stroke-width="5"/>
+    <path d="M118 52h48M142 28v48M126 36h32" stroke="#ffc76d" stroke-width="5"/>
+    <circle cx="242" cy="52" r="34" fill="none" stroke="#38d98b" stroke-width="5"/>
+    <path d="M218 62l22 18 34-54" fill="none" stroke="#f4f1d6" stroke-width="6"/>
+  </g>
+</svg>

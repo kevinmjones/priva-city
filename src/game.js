@@ -1,559 +1,470 @@
-const WORLD = { width: 1920, height: 1080, floor: 914 };
-const FINAL_CODE = "274913";
+// game.js — Priva-city v2 side-scroller engine (OTL-75 art-pipeline pivot).
+//
+// Custom canvas renderer at a low internal resolution scaled with
+// nearest-neighbour. Parallax skyline, procedural pixel-art, additive night
+// lighting, particles, an animated walk-cycle character and a real interactive
+// privacy quest. No game framework — full pixel control.
 
-const state = {
-  startedAt: Date.now(),
-  activePrompt: null,
-  codes: {},
-  sigils: new Set(),
-  completed: new Set(),
-  finalOpen: false,
+import * as art from "./art.js";
+import { initAudio, resume, setMuted, sfx } from "./audio.js";
+import { QUESTS, makePuzzle } from "./quests.js";
+
+const VW = 480, VH = 270;           // internal virtual resolution (16:9)
+const WORLD_W = 2200;               // level width (Phase 0 slice)
+const GROUND_Y = 210;               // y of sidewalk top in world space
+const GRAV = 0.5, MOVE = 1.6, JUMP = 7.4, FRICTION = 0.8;
+const CFH = 26;                     // character frame height
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+// ---- offscreen lighting buffer (additive glow) ----
+const lightBuf = art.makeCanvas(VW, VH);
+
+// ---- assets ----
+const A = {};
+function buildAssets() {
+  A.sky = art.buildSky(VW, VH);
+  A.far = art.buildSkyline(WORLD_W * 0.5, 150, { palette: art.PAL.farTower, seed: 11, density: 0.5, litChance: 0.25, warm: false });
+  A.mid = art.buildSkyline(WORLD_W * 0.7, 170, { palette: art.PAL.midTower, seed: 23, density: 0.6, litChance: 0.4, warm: true });
+  A.near = art.buildSkyline(WORLD_W, 190, { palette: art.PAL.nearWall, seed: 37, density: 0.55, litChance: 0.55, warm: true });
+  A.street = art.buildStreet(WORLD_W, 60);
+  A.lamp = art.buildLamp();
+  A.fog = art.buildFog(VW, VH);
+  A.kiosk = art.buildKiosk();
+  const ch = art.buildCharacter();
+  A.char = ch.canvas; A.cfw = ch.fw; A.cfh = ch.fh; A.cframes = ch.frames;
+
+  const fac = art.buildFacade(360, 150, 71, "TRUST HUB");
+  A.facade = fac.canvas; A.facadeDoorX = fac.doorX;
+  A.signHub = art.buildNeonSign("DATA BROKER", art.PAL.neonPink);
+  A.planter = art.buildPlanter(120);
+}
+
+// foreground planters (closest parallax layer) for depth
+const planters = [80, 460, 1320, 1760];
+
+// ---- world entities (Phase 0 slice) ----
+const facadeX = 1080;
+const lamps = [240, 640, 1040, 1480, 1900];
+const kioskX = facadeX + 180;
+
+const player = {
+  x: 180, y: GROUND_Y - CFH, vx: 0, vy: 0, onGround: true,
+  face: 1, anim: 0, animT: 0, state: "idle", interacting: false, _stepped: false,
 };
 
-const quests = [
-  { id: "consent", label: "Restore consent at the Arcade kiosk." },
-  { id: "rights", label: "Fulfill the rights request at the Exchange." },
-  { id: "retention", label: "Purge stale telemetry at Retention Rail." },
-  { id: "vault", label: "Enter the earned code at the Privacy Trust Hub." },
-];
+// ---- particles (embers / dust) ----
+const particles = [];
+function spawnAmbientParticles() {
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: Math.random() * WORLD_W, y: Math.random() * VH,
+      vx: -0.05 - Math.random() * 0.1, vy: -0.02 - Math.random() * 0.05,
+      life: Infinity, size: Math.random() > 0.8 ? 2 : 1,
+      col: Math.random() > 0.6 ? "rgba(120,150,220,0.5)" : "rgba(255,210,140,0.4)",
+    });
+  }
+}
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 0.5 + Math.random() * 2.2;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 40 + Math.random() * 30, size: Math.random() > 0.5 ? 2 : 1, col: color, gravity: 0.06 });
+  }
+}
 
-const challenges = {
-  consent: {
-    title: "Consent Arcade",
-    npc: "Mira, user advocate",
-    body:
-      "The product team wants one bundled permission for location, contacts, browsing history, and diagnostics. Which launch option best respects privacy while preserving the core service?",
-    options: [
-      {
-        text: "Collect everything once, then let users opt out later.",
-        ok: false,
-        result: "Not yet. That buries the privacy choice after collection. Pick a just-in-time option with clear purpose limits.",
-      },
-      {
-        text: "Ask separately for precise location only when the map feature is opened; keep diagnostics optional.",
-        ok: true,
-        result: "Correct. Specific, just-in-time consent earns code segment 27. Next: carry the segment to the remaining districts.",
-        code: "27",
-      },
-      {
-        text: "Hide optional permissions inside the terms so the launch flow stays short.",
-        ok: false,
-        result: "Not yet. Short is useful, but consent is not valid when the choice is hidden. Choose the transparent option.",
-      },
-    ],
-  },
-  rights: {
-    title: "Rights Exchange",
-    npc: "Noor, access desk lead",
-    body:
-      "A resident submits a data subject access request asking what profile data trained recommendations. Which response should the city provide?",
-    options: [
-      {
-        text: "Send the resident their account profile, preference signals, and recommendation event categories.",
-        ok: true,
-        result: "Correct. The response covers the relevant personal data categories and earns code segment 49. Next: check Retention Rail.",
-        code: "49",
-      },
-      {
-        text: "Only send the public privacy policy because it describes data use generally.",
-        ok: false,
-        result: "Not yet. A policy is not a complete access response. The resident asked for their data categories.",
-      },
-      {
-        text: "Reject the request because recommendation logs are too technical.",
-        ok: false,
-        result: "Not yet. Complexity is not a reason to ignore access rights. Explain the categories in clear language.",
-      },
-    ],
-  },
-  retention: {
-    title: "Retention Rail",
-    npc: "Vale, systems archivist",
-    body:
-      "Telemetry from a beta feature is older than the documented 30-day retention period. Billing records still need to remain intact. What purge should run?",
-    options: [
-      {
-        text: "Delete stale beta telemetry and keep only billing records required for accounting.",
-        ok: true,
-        result: "Correct. Purpose-bound deletion earns code segment 13. Next: enter the full code at the Trust Hub.",
-        code: "13",
-      },
-      {
-        text: "Keep all telemetry indefinitely in case future models need training data.",
-        ok: false,
-        result: "Not yet. Future possible use does not override a documented retention limit. Select the purpose-bound purge.",
-      },
-      {
-        text: "Delete every record for beta users, including invoices.",
-        ok: false,
-        result: "Not yet. Deletion must respect retention duties too. Purge stale telemetry without breaking required records.",
-      },
-    ],
-  },
+// ---- input ----
+const keys = {};
+let interactPressed = false;
+window.addEventListener("keydown", (e) => {
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space"].includes(e.code)) e.preventDefault();
+  keys[e.code] = true;
+  if (e.code === "KeyE" || e.code === "Enter") interactPressed = true;
+  if (game.scene === "puzzle" && e.code === "Escape") closePuzzle(false);
+  onKey(e.code);
+});
+window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+
+function bindTouch(id, code) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const set = (v) => (ev) => { ev.preventDefault(); keys[code] = v; if (v && code === "KeyE") interactPressed = true; };
+  el.addEventListener("touchstart", set(true), { passive: false });
+  el.addEventListener("touchend", set(false), { passive: false });
+  el.addEventListener("mousedown", set(true));
+  window.addEventListener("mouseup", set(false));
+}
+
+// ---- game state ----
+const game = {
+  scene: "title",
+  camX: 0,
+  quests: QUESTS.map((q) => ({ ...q, done: false })),
+  sigils: 0,
+  shake: 0,
+  flash: 0,
+  t: 0,
+  activePuzzle: null,
+  banner: null, bannerT: 0,
 };
 
-const locations = [
-  { id: "consent", x: 300, y: WORLD.floor - 46, accent: 0xffc76d, label: "Consent Arcade", kind: "kiosk" },
-  { id: "rights", x: 820, y: WORLD.floor - 48, accent: 0x63d7ff, label: "Rights Exchange", kind: "desk" },
-  { id: "retention", x: 1260, y: WORLD.floor - 46, accent: 0x8d73ff, label: "Retention Rail", kind: "terminal" },
-  { id: "vault", x: 1660, y: WORLD.floor - 66, accent: 0x38d98b, label: "Trust Hub", kind: "vault" },
-];
-
-const sigils = [
-  { id: "a", x: 470, y: WORLD.floor - 132 },
-  { id: "b", x: 720, y: WORLD.floor - 360 },
-  { id: "c", x: 1120, y: WORLD.floor - 238 },
-  { id: "d", x: 1510, y: WORLD.floor - 348 },
-];
-
-const platforms = [
-  { x: 636, y: WORLD.floor - 286, w: 250, h: 22 },
-  { x: 1026, y: WORLD.floor - 164, w: 250, h: 22 },
-  { x: 1410, y: WORLD.floor - 282, w: 230, h: 22 },
-];
-
-const touch = { left: false, right: false, jump: false };
-let touchControlsBound = false;
-
-const config = {
-  type: Phaser.AUTO,
-  parent: "game",
-  width: 1280,
-  height: 720,
-  backgroundColor: "#07122a",
-  physics: {
-    default: "arcade",
-    arcade: { gravity: { y: 1180 }, debug: false },
-  },
-  scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  scene: { preload, create, update },
-};
-
-let sceneRef;
-let player;
-let cursors;
-let keys;
-let interactZones;
-let sigilObjects;
-let platformColliders;
-let timerId;
-
-new Phaser.Game(config);
-
-function preload() {}
-
-function create() {
-  sceneRef = this;
-  this.physics.world.setBounds(0, 0, WORLD.width, WORLD.height);
-  drawCity(this);
-  createPlayer(this);
-  createInteractables(this);
-  createInput(this);
-  updateHud();
-  updateTimer();
-  if (timerId) clearInterval(timerId);
-  timerId = setInterval(updateTimer, 1000);
+function onKey(code) {
+  if (game.scene === "title" && (code === "Enter" || code === "Space")) startGame();
+  if (game.scene === "win" && code === "Enter") location.reload();
 }
 
-function drawCity(scene) {
-  const g = scene.add.graphics();
-  g.fillStyle(0x07122a, 1).fillRect(0, 0, WORLD.width, WORLD.height);
-
-  drawSkyline(g, 0x030711, 0.34, 760, 0);
-  drawSkyline(g, 0x102a63, 0.54, 690, 54);
-  drawSkyline(g, 0x264d9b, 0.28, 620, 112);
-
-  g.fillStyle(0x0a1932, 1).fillRect(0, 706, WORLD.width, 250);
-  g.lineStyle(4, 0x63d7ff, 0.55).lineBetween(0, 706, WORLD.width, 706);
-
-  const buildings = [
-    [72, 492, 230, 414, 0x07172f],
-    [328, 548, 260, 358, 0x0a1d3b],
-    [650, 432, 250, 474, 0x07172f],
-    [926, 584, 230, 322, 0x102a63],
-    [1190, 500, 260, 406, 0x07172f],
-    [1510, 396, 284, 510, 0x0a1d3b],
-  ];
-
-  buildings.forEach(([x, y, w, h, color], index) => drawBuilding(g, x, y, w, h, color, index));
-
-  platforms.forEach((platform) => {
-    g.fillStyle(0x6f6c9f, 1).fillRect(platform.x, platform.y, platform.w, platform.h);
-    g.lineStyle(3, 0xffc76d, 0.5).lineBetween(platform.x, platform.y, platform.x + platform.w, platform.y);
-    for (let x = platform.x + 18; x < platform.x + platform.w - 10; x += 32) {
-      g.fillStyle(0x030711, 0.52).fillRect(x, platform.y + 8, 18, 4);
-    }
-  });
-
-  g.fillStyle(0x030711, 1).fillRect(0, WORLD.floor, WORLD.width, WORLD.height - WORLD.floor);
-  g.fillStyle(0x07172f, 1).fillRect(0, WORLD.floor + 12, WORLD.width, 86);
-  g.lineStyle(5, 0x63d7ff, 0.76).lineBetween(0, WORLD.floor, WORLD.width, WORLD.floor);
-  for (let x = 0; x < WORLD.width; x += 38) {
-    g.fillStyle(x % 76 === 0 ? 0x12376f : 0x102a63, 0.72).fillRect(x, WORLD.floor + 24, 24, 8);
-    g.fillStyle(0x6f6c9f, 0.28).fillRect(x + 14, WORLD.floor + 56, 32, 6);
-  }
-
-  platformColliders = [createStaticZone(scene, WORLD.width / 2, WORLD.floor + 14, WORLD.width, 28)];
-  platforms.forEach((platform) => {
-    platformColliders.push(createStaticZone(scene, platform.x + platform.w / 2, platform.y + platform.h / 2, platform.w, platform.h));
-  });
-
-  scene.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
+function startGame() {
+  initAudio(); resume(); sfx.start();
+  document.getElementById("titleScreen").classList.add("hidden");
+  document.getElementById("hud").classList.remove("hidden");
+  game.scene = "play";
+  showBanner("DATA BROKER DISTRICT", "Revoke the broker's consent grab");
 }
 
-function createStaticZone(scene, x, y, w, h) {
-  const zone = scene.add.zone(x, y, w, h);
-  scene.physics.add.existing(zone, true);
-  zone.body.setSize(w, h);
-  zone.body.updateFromGameObject();
-  return zone;
+function showBanner(title, sub) { game.banner = { title, sub }; game.bannerT = 180; }
+
+// ---- the quest interaction (consent switchboard puzzle) ----
+function openPuzzle() {
+  const p = makePuzzle();
+  game.activePuzzle = p;
+  game.scene = "puzzle";
+  player.interacting = true;
+  player.anim = 5;
+  sfx.interact();
+  renderPuzzleDOM(p);
+  document.getElementById("puzzle").classList.remove("hidden");
 }
 
-function drawSkyline(g, color, alpha, baseY, offset) {
-  g.fillStyle(color, alpha);
-  for (let x = -120 + offset; x < WORLD.width + 120; x += 132) {
-    const h = 170 + ((x + offset) % 5) * 34;
-    const w = 84 + ((x + offset) % 3) * 18;
-    g.fillRect(x, baseY - h, w, h);
-    if (alpha > 0.4) {
-      for (let wy = baseY - h + 28; wy < baseY - 24; wy += 42) {
-        g.fillStyle(0xffc76d, 0.12).fillRect(x + 14, wy, 16, 8);
-        g.fillStyle(0x63d7ff, 0.1).fillRect(x + 48, wy + 14, 18, 8);
-      }
-      g.fillStyle(color, alpha);
-    }
-  }
-}
-
-function drawBuilding(g, x, y, w, h, color, index) {
-  g.fillStyle(color, 1).fillRect(x, y, w, h);
-  g.lineStyle(2, 0x12376f, 0.9).strokeRect(x, y, w, h);
-  for (let by = y + 26; by < y + h - 20; by += 34) {
-    g.lineStyle(1, 0x12376f, 0.45).lineBetween(x, by, x + w, by);
-  }
-  for (let wx = x + 24; wx < x + w - 26; wx += 52) {
-    for (let wy = y + 44; wy < y + h - 74; wy += 68) {
-      const lit = (wx + wy + index) % 3 !== 0;
-      g.fillStyle(lit ? 0xffc76d : 0x264d9b, lit ? 0.72 : 0.34).fillRect(wx, wy, 22, 30);
-      g.fillStyle(0x030711, 0.42).fillRect(wx + 9, wy, 4, 30);
-    }
-  }
-  g.fillStyle(0x6f6c9f, 1).fillRect(x - 8, y - 14, w + 16, 14);
-  if (index % 2 === 0) {
-    g.fillStyle(0x38d98b, 0.42).fillRect(x + w - 52, y + 82, 34, 42);
-    g.fillStyle(0x38d98b, 0.72).fillRect(x + w - 43, y + 70, 16, 18);
-  }
-}
-
-function createPlayer(scene) {
-  const body = scene.add.graphics();
-  body.fillStyle(0xf4f1d6, 1).fillRect(8, 8, 28, 42);
-  body.fillStyle(0x38d98b, 1).fillRect(13, 16, 18, 6);
-  body.fillStyle(0x8d73ff, 1).fillRect(10, 50, 10, 18);
-  body.fillStyle(0x63d7ff, 1).fillRect(24, 50, 10, 18);
-  body.fillStyle(0xffc76d, 1).fillRect(12, 0, 20, 10);
-  body.generateTexture("player", 44, 72);
-  body.destroy();
-
-  player = scene.physics.add.sprite(120, WORLD.floor - 90, "player");
-  player.setCollideWorldBounds(true);
-  player.body.setSize(30, 64).setOffset(7, 8);
-  player.setDragX(1800);
-  player.setMaxVelocity(360, 840);
-  platformColliders.forEach((platform) => scene.physics.add.collider(player, platform));
-  scene.cameras.main.startFollow(player, true, 0.08, 0.08, 0, 118);
-}
-
-function createInteractables(scene) {
-  interactZones = scene.physics.add.staticGroup();
-  sigilObjects = scene.physics.add.staticGroup();
-
-  locations.forEach((loc) => {
-    drawLandmark(scene, loc);
-    const zone = scene.add.zone(loc.x, loc.y - 26, 260, 170);
-    scene.physics.add.existing(zone, true);
-    zone.kind = loc.id === "vault" ? "vault" : "challenge";
-    zone.challengeId = loc.id;
-    zone.label = loc.label;
-    interactZones.add(zone);
-  });
-
-  sigils.forEach((sigil) => {
-    const g = scene.add.graphics();
-    g.fillStyle(0xffc76d, 0.26).fillCircle(20, 20, 18);
-    g.lineStyle(3, 0xffc76d, 0.94).strokeCircle(20, 20, 18);
-    g.lineStyle(3, 0x38d98b, 0.9).lineBetween(10, 20, 30, 20).lineBetween(20, 10, 20, 30);
-    g.generateTexture(`sigil-${sigil.id}`, 40, 40);
-    g.destroy();
-    const sprite = scene.physics.add.staticSprite(sigil.x, sigil.y, `sigil-${sigil.id}`);
-    sprite.sigilId = sigil.id;
-    sigilObjects.add(sprite);
-  });
-}
-
-function drawLandmark(scene, loc) {
-  const g = scene.add.graphics();
-  const x = loc.x;
-  const y = loc.y;
-  g.fillStyle(0x030711, 0.72).fillRect(x - 82, y + 44, 164, 18);
-  g.lineStyle(3, loc.accent, 0.84);
-  if (loc.kind === "kiosk") {
-    g.fillStyle(0x07172f, 1).fillRect(x - 48, y - 76, 96, 118);
-    g.strokeRect(x - 48, y - 76, 96, 118);
-    g.fillStyle(loc.accent, 0.62).fillRect(x - 30, y - 52, 60, 18);
-    g.fillStyle(0x38d98b, 0.8).fillRect(x - 20, y - 20, 40, 10);
-  } else if (loc.kind === "desk") {
-    g.fillStyle(0x07172f, 1).fillRect(x - 70, y - 56, 140, 92);
-    g.strokeRect(x - 70, y - 56, 140, 92);
-    g.fillStyle(0xf4f1d6, 0.8).fillRect(x - 48, y - 32, 36, 42);
-    g.fillStyle(loc.accent, 0.55).fillRect(x + 8, y - 34, 38, 12);
-  } else if (loc.kind === "terminal") {
-    g.fillStyle(0x07172f, 1).fillRect(x - 62, y - 64, 124, 104);
-    g.strokeRect(x - 62, y - 64, 124, 104);
-    g.fillStyle(loc.accent, 0.52).fillRect(x - 40, y - 44, 80, 16);
-    g.fillStyle(0xffc76d, 0.82).fillRect(x - 48, y + 8, 96, 8);
+function closePuzzle(success) {
+  document.getElementById("puzzle").classList.add("hidden");
+  game.scene = "play";
+  player.interacting = false;
+  game.activePuzzle = null;
+  if (success) {
+    game.quests[0].done = true;
+    game.sigils++;
+    game.shake = 14; game.flash = 1;
+    burst(kioskX, GROUND_Y - 20, "rgba(93,255,155,0.9)", 60);
+    burst(kioskX, GROUND_Y - 20, "rgba(52,231,255,0.9)", 40);
+    sfx.success();
+    showBanner("CONSENT REVOKED", "+1 Consent Sigil  ·  Broker node offline");
+    updateHUD();
+    if (game.quests.every((q) => q.done)) setTimeout(() => (game.scene = "win"), 1400);
   } else {
-    g.fillStyle(0x030711, 1).fillRect(x - 62, y - 112, 124, 154);
-    g.strokeRect(x - 62, y - 112, 124, 154);
-    g.fillStyle(0x38d98b, 0.42).fillRect(x - 30, y - 62, 60, 70);
-    g.lineStyle(2, 0xffc76d, 0.8).strokeRect(x - 38, y - 76, 76, 98);
+    game.shake = 6;
   }
-
-  scene.add
-    .text(x - 78, y + 70, loc.label, {
-      color: "#f4f1d6",
-      fontSize: "16px",
-      backgroundColor: "rgba(3,7,17,0.68)",
-      padding: { x: 6, y: 4 },
-    })
-    .setDepth(5);
 }
 
-function createInput(scene) {
-  cursors = scene.input.keyboard.createCursorKeys();
-  keys = scene.input.keyboard.addKeys("W,A,D,E,SPACE,ESC");
-  keys.E.on("down", interact);
-  keys.ESC.on("down", closeModal);
+function renderPuzzleDOM(p) {
+  const root = document.getElementById("puzzleBody");
+  root.innerHTML = "";
+  const h = document.createElement("div");
+  h.className = "pz-head";
+  h.innerHTML = `<div class="pz-title">${p.title}</div><div class="pz-npc">${p.npc}</div><p class="pz-brief">${p.brief}</p>`;
+  root.appendChild(h);
 
-  if (touchControlsBound) return;
-  touchControlsBound = true;
-  document.querySelectorAll("[data-touch]").forEach((button) => {
-    const key = button.dataset.touch;
-    const down = (event) => {
-      event.preventDefault();
-      if (key === "interact") interact();
-      else touch[key] = true;
-    };
-    const up = (event) => {
-      event.preventDefault();
-      if (key !== "interact") touch[key] = false;
-    };
-    button.addEventListener("pointerdown", down);
-    button.addEventListener("pointerup", up);
-    button.addEventListener("pointerleave", up);
-    button.addEventListener("pointercancel", up);
+  const list = document.createElement("div");
+  list.className = "pz-toggles";
+  p.toggles.forEach((tg) => {
+    const row = document.createElement("button");
+    row.className = "pz-toggle" + (tg.on ? " on" : "");
+    row.innerHTML = `<span class="pz-knob"></span><span class="pz-label">${tg.label}</span><span class="pz-hint">${tg.hint}</span>`;
+    row.onclick = () => { tg.on = !tg.on; row.classList.toggle("on", tg.on); sfx.toggle(); };
+    list.appendChild(row);
   });
+  root.appendChild(list);
+
+  const actions = document.createElement("div");
+  actions.className = "pz-actions";
+  const confirm = document.createElement("button");
+  confirm.className = "pz-confirm";
+  confirm.textContent = "Submit consent settings";
+  confirm.onclick = () => {
+    const ok = p.toggles.every((tg) => tg.on === tg.correct);
+    if (ok) closePuzzle(true);
+    else {
+      sfx.error();
+      const fb = document.getElementById("pzFeedback");
+      fb.textContent = p.wrongHint;
+      fb.classList.add("show");
+      setTimeout(() => fb.classList.remove("show"), 2400);
+    }
+  };
+  const cancel = document.createElement("button");
+  cancel.className = "pz-cancel";
+  cancel.textContent = "Walk away (Esc)";
+  cancel.onclick = () => closePuzzle(false);
+  actions.appendChild(confirm); actions.appendChild(cancel);
+  root.appendChild(actions);
+
+  const fb = document.createElement("div");
+  fb.id = "pzFeedback"; fb.className = "pz-feedback";
+  root.appendChild(fb);
 }
 
+// ---- update ----
 function update() {
-  if (!player) return;
-  const left = cursors.left.isDown || keys.A.isDown || touch.left;
-  const right = cursors.right.isDown || keys.D.isDown || touch.right;
-  const jump = cursors.up.isDown || keys.W?.isDown || keys.SPACE.isDown || touch.jump;
-
-  if (left === right) player.setAccelerationX(0);
-  else player.setAccelerationX(left ? -1600 : 1600);
-
-  if (jump && player.body.blocked.down) {
-    player.setVelocityY(-610);
+  game.t++;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    if (p.gravity) p.vy += p.gravity;
+    if (p.life !== Infinity) { p.life--; if (p.life <= 0) { particles.splice(i, 1); continue; } }
+    else { if (p.y < 0) p.y = VH; if (p.x < game.camX - 10) p.x = game.camX + VW + 10; }
   }
+  if (game.flash > 0) game.flash -= 0.04;
+  if (game.shake > 0) game.shake *= 0.86;
+  if (game.bannerT > 0) game.bannerT--;
 
-  player.setFlipX(left && !right);
-  findActivePrompt();
-  collectSigils();
+  if (game.scene !== "play") return;
+
+  if (keys.ArrowLeft || keys.KeyA) { player.vx -= MOVE * 0.4; player.face = -1; }
+  if (keys.ArrowRight || keys.KeyD) { player.vx += MOVE * 0.4; player.face = 1; }
+  if ((keys.ArrowUp || keys.KeyW || keys.Space) && player.onGround) {
+    player.vy = -JUMP; player.onGround = false; sfx.jump();
+  }
+  player.vx *= FRICTION;
+  player.vx = Math.max(-MOVE, Math.min(MOVE, player.vx));
+  player.x += player.vx;
+  player.vy += GRAV;
+  player.y += player.vy;
+
+  if (player.y + CFH >= GROUND_Y) {
+    if (!player.onGround && player.vy > 2) { sfx.land(); burst(player.x, GROUND_Y, "rgba(150,160,190,0.4)", 6); }
+    player.y = GROUND_Y - CFH; player.vy = 0; player.onGround = true;
+  }
+  player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+
+  if (!player.onGround) { player.state = "jump"; player.anim = 2; }
+  else if (Math.abs(player.vx) > 0.3) {
+    player.state = "walk";
+    player.animT += Math.abs(player.vx) * 0.12;
+    const f = (player.animT | 0) % 4;
+    player.anim = 1 + f;
+    if (f === 1 && !player._stepped) { sfx.step(); player._stepped = true; }
+    if (f !== 1) player._stepped = false;
+  } else { player.state = "idle"; player.anim = 0; }
+
+  const target = player.x - VW / 2;
+  game.camX += (target - game.camX) * 0.12;
+  game.camX = Math.max(0, Math.min(WORLD_W - VW, game.camX));
+
+  const nearKiosk = !game.quests[0].done && Math.abs(player.x - kioskX) < 26;
+  const prompt = document.getElementById("interactPrompt");
+  if (nearKiosk) { prompt.classList.add("show"); if (interactPressed) openPuzzle(); }
+  else prompt.classList.remove("show");
+
+  interactPressed = false;
 }
 
-function findActivePrompt() {
-  let active = null;
-  sceneRef.physics.overlap(player, interactZones, (_player, zone) => {
-    if (!active) {
-      active = zone;
-    }
+// ---- render ----
+function drawLayer(img, parallax, yOff) {
+  const sx = game.camX * parallax;
+  const o = -(((sx % img.width) + img.width) % img.width);
+  ctx.drawImage(img, o, yOff);
+  ctx.drawImage(img, o + img.width, yOff);
+}
+
+function render() {
+  ctx.clearRect(0, 0, VW, VH);
+  const shx = game.shake > 0.4 ? (Math.random() - 0.5) * game.shake : 0;
+  const shy = game.shake > 0.4 ? (Math.random() - 0.5) * game.shake : 0;
+  ctx.save();
+  ctx.translate(Math.round(shx), Math.round(shy));
+
+  ctx.drawImage(A.sky, 0, 0);
+  drawLayer(A.far, 0.18, VH - 150 - 12);
+  drawLayer(A.mid, 0.38, VH - 170 + 4);
+  drawLayer(A.near, 0.62, VH - 190 + 18);
+
+  const fx = facadeX - game.camX * 0.85;
+  ctx.drawImage(A.facade, Math.round(fx), GROUND_Y - 150);
+  ctx.drawImage(A.signHub, Math.round(fx + 110), GROUND_Y - 150 + 6);
+
+  ctx.drawImage(A.street, -game.camX, GROUND_Y);
+
+  lamps.forEach((lx) => {
+    const sxp = Math.round(lx - game.camX);
+    if (sxp < -20 || sxp > VW + 20) return;
+    ctx.drawImage(A.lamp, sxp, GROUND_Y - 60);
   });
-  state.activePrompt = active;
-  updatePrompt();
-}
 
-function collectSigils() {
-  sigilObjects.children.iterate((sprite) => {
-    if (!sprite?.active) return;
-    if (Phaser.Math.Distance.Between(player.x, player.y, sprite.x, sprite.y) < 48) {
-      state.sigils.add(sprite.sigilId);
-      sprite.destroy();
-      updateHud();
-      flashCamera(0x38d98b);
-    }
+  const kx = Math.round(kioskX - game.camX);
+  ctx.save();
+  if (game.quests[0].done) ctx.globalAlpha = 0.5;
+  ctx.drawImage(A.kiosk, kx - 13, GROUND_Y - 38);
+  ctx.restore();
+
+  drawPlayer();
+
+  particles.forEach((p) => {
+    ctx.fillStyle = p.col;
+    ctx.fillRect(Math.round(p.x - game.camX), Math.round(p.y), p.size, p.size);
   });
-}
 
-function updatePrompt() {
-  const prompt = document.getElementById("promptText");
-  if (!state.activePrompt) {
-    prompt.textContent = "Explore the districts and look for amber interaction lights.";
-    prompt.classList.remove("ready");
-    return;
-  }
-  const verb = state.activePrompt.kind === "vault" ? "enter vault" : "interact";
-  prompt.textContent = `Press E to ${verb}: ${state.activePrompt.label}`;
-  prompt.classList.add("ready");
-}
-
-function interact() {
-  if (!state.activePrompt || document.getElementById("modal").open) return;
-  if (state.activePrompt.kind === "vault") {
-    openVault();
-  } else {
-    openChallenge(state.activePrompt.challengeId);
-  }
-}
-
-function openChallenge(id) {
-  const challenge = challenges[id];
-  if (state.completed.has(id)) {
-    showModal(`
-      <h2>${challenge.title}</h2>
-      <p><strong>${challenge.npc}</strong></p>
-      <p>This district is stable. Carry the code segment forward and keep restoring the remaining tasks.</p>
-    `);
-    return;
-  }
-
-  const options = challenge.options.map((option, index) => `<button data-option="${index}">${option.text}</button>`).join("");
-  showModal(`
-    <h2>${challenge.title}</h2>
-    <p><strong>${challenge.npc}</strong></p>
-    <p>${challenge.body}</p>
-    <div class="choices">${options}</div>
-    <div id="challenge-result" class="result" hidden></div>
-  `);
-
-  document.querySelectorAll("[data-option]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const option = challenge.options[Number(button.dataset.option)];
-      const result = document.getElementById("challenge-result");
-      result.hidden = false;
-      result.textContent = option.result;
-      result.className = `result ${option.ok ? "result--success" : "result--error"}`;
-      button.classList.toggle("correct", option.ok);
-      button.classList.toggle("incorrect", !option.ok);
-      if (option.ok) {
-        state.completed.add(id);
-        state.codes[id] = option.code;
-        document.querySelectorAll("[data-option]").forEach((b) => (b.disabled = true));
-        updateHud();
-        flashCamera(0x38d98b);
-      }
-    });
+  // foreground planters (parallax > 1, drawn in front for depth)
+  planters.forEach((lx) => {
+    const sxp = Math.round(lx - game.camX * 1.12);
+    if (sxp < -130 || sxp > VW + 10) return;
+    ctx.drawImage(A.planter, sxp, GROUND_Y - 2);
   });
-}
 
-function openVault() {
-  const known = ["consent", "rights", "retention"].map((id) => state.codes[id] || "--").join(" ");
-  showModal(`
-    <h2>Privacy Trust Hub</h2>
-    <p>Enter the six-digit code assembled from the districts. Current segments: <strong>${known}</strong></p>
-    <div class="code-readout" id="readout"></div>
-    <div class="keypad">
-      ${["1", "2", "3", "4", "5", "6", "7", "8", "9", "back", "0", "ok"].map((key) => `<button data-key="${key}">${key.toUpperCase()}</button>`).join("")}
-    </div>
-    <div id="vault-result" class="result" hidden></div>
-  `);
-
-  let input = "";
-  const readout = document.getElementById("readout");
-  const result = document.getElementById("vault-result");
-  const render = () => (readout.textContent = input.padEnd(6, "•"));
-  render();
-
-  document.querySelectorAll("[data-key]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const key = button.dataset.key;
-      if (key === "back") input = input.slice(0, -1);
-      else if (key === "ok") submitVault(input, result);
-      else if (input.length < 6) input += key;
-      render();
-    });
+  // lighting pass
+  const lc = lightBuf.ctx;
+  lc.clearRect(0, 0, VW, VH);
+  lamps.forEach((lx) => {
+    const sxp = lx - game.camX;
+    glow(lc, sxp + 6, GROUND_Y - 50, 46, "rgba(255,200,120,0.55)");
+    glow(lc, sxp + 6, GROUND_Y + 4, 30, "rgba(255,190,110,0.35)");
   });
-}
+  if (!game.quests[0].done) glow(lc, kioskX - game.camX, GROUND_Y - 22, 26, "rgba(52,231,255,0.5)");
+  glow(lc, facadeX - game.camX * 0.85 + 140, GROUND_Y - 138, 40, "rgba(255,77,141,0.4)");
+  glow(lc, facadeX - game.camX * 0.85 + A.facadeDoorX, GROUND_Y - 16, 30, "rgba(255,200,120,0.4)");
 
-function submitVault(input, result) {
-  result.hidden = false;
-  if (input === FINAL_CODE) {
-    state.finalOpen = true;
-    state.completed.add("vault");
-    result.className = "result result--success";
-    result.innerHTML = `
-      Vault open. Priva-city trust protocol restored.
-      <div class="modal-actions"><button class="primary" id="restart-game" type="button">Restart run</button></div>
-    `;
-    document.getElementById("restart-game").addEventListener("click", restartGame);
-    updateHud();
-    flashCamera(0x38d98b);
-  } else {
-    result.className = "result result--error";
-    result.textContent = "Code rejected. Finish each district and enter the segments in quest order.";
+  ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(lightBuf.c, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+
+  ctx.globalAlpha = 0.55;
+  drawLayer(A.fog, 0.15, 0);
+  ctx.globalAlpha = 1;
+
+  vignette();
+  ctx.restore();
+
+  if (game.flash > 0) {
+    ctx.fillStyle = `rgba(180,255,210,${game.flash * 0.5})`;
+    ctx.fillRect(0, 0, VW, VH);
   }
+  if (game.bannerT > 0) drawBanner();
 }
 
-function restartGame() {
-  state.startedAt = Date.now();
-  state.activePrompt = null;
-  state.codes = {};
-  state.sigils = new Set();
-  state.completed = new Set();
-  state.finalOpen = false;
-  closeModal();
-  sceneRef.scene.restart();
+function glow(c, x, y, r, color) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = g;
+  c.fillRect(x - r, y - r, r * 2, r * 2);
 }
 
-function flashCamera(color) {
-  sceneRef?.cameras?.main?.flash(110, (color >> 16) & 255, (color >> 8) & 255, color & 255, false);
+function vignette() {
+  const g = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.35, VW / 2, VH / 2, VH * 0.85);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,8,0.55)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
 }
 
-function showModal(html) {
-  document.getElementById("modal-body").innerHTML = html;
-  document.getElementById("modal").showModal();
+function drawPlayer() {
+  const sx = (player.anim % A.cframes) * A.cfw;
+  const px = Math.round(player.x - game.camX);
+  const py = Math.round(player.y);
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(px, GROUND_Y + 2, 8, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(px, py);
+  if (player.face < 0) ctx.scale(-1, 1);
+  ctx.drawImage(A.char, sx, 0, A.cfw, A.cfh, -A.cfw / 2, 0, A.cfw, A.cfh);
+  ctx.restore();
 }
 
-function closeModal() {
-  const modal = document.getElementById("modal");
-  if (modal.open) modal.close();
+function drawBanner() {
+  const a = Math.min(1, game.bannerT / 30, (180 - game.bannerT) / 16 + 0.1);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, a));
+  ctx.fillStyle = "rgba(8,10,24,0.72)";
+  ctx.fillRect(0, 70, VW, 34);
+  ctx.fillStyle = art.PAL.neonCyan;
+  ctx.fillRect(0, 70, VW, 1); ctx.fillRect(0, 103, VW, 1);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#eaf6ff";
+  ctx.font = "bold 13px monospace";
+  ctx.fillText(game.banner.title, VW / 2, 87);
+  ctx.fillStyle = "#9fb4d6";
+  ctx.font = "8px monospace";
+  ctx.fillText(game.banner.sub, VW / 2, 99);
+  ctx.restore();
+  ctx.textAlign = "left";
 }
 
-function updateHud() {
-  document.getElementById("code-slots").textContent = `${state.codes.consent || "--"} ${state.codes.rights || "--"} ${state.codes.retention || "--"}`;
-  document.getElementById("sigils").textContent = `${state.sigils.size}/4`;
-  const list = document.getElementById("quest-list");
-  const firstOpen = quests.find((quest) => !state.completed.has(quest.id))?.id;
-  list.innerHTML = quests
-    .map((quest, index) => {
-      const status = state.completed.has(quest.id) ? "done" : quest.id === firstOpen ? "active" : "";
-      return `<li class="${status}" data-step="${index + 1}"><span>${quest.label}</span></li>`;
-    })
-    .join("");
-
-  const sideQuest = document.getElementById("side-quest");
-  sideQuest.textContent =
-    state.sigils.size === 4 ? "All consent sigils recovered." : `Find the four consent sigils hidden around Priva-city. ${state.sigils.size}/4 recovered.`;
-  sideQuest.classList.toggle("complete", state.sigils.size === 4);
+// ---- HUD ----
+function updateHUD() {
+  const ql = document.getElementById("questList");
+  if (ql) {
+    ql.innerHTML = game.quests.map((q) =>
+      `<li class="${q.done ? "done" : ""}">${q.done ? "✔" : "▸"} ${q.label}</li>`).join("");
+  }
+  const s = document.getElementById("sigilCount");
+  if (s) s.textContent = `${game.sigils}/${game.quests.length}`;
 }
 
-function updateTimer() {
-  const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
-  const mins = String(Math.floor(elapsed / 60)).padStart(2, "0");
-  const secs = String(elapsed % 60).padStart(2, "0");
-  document.getElementById("timer").textContent = `${mins}:${secs}`;
+// ---- scaling ----
+function resize() {
+  const scale = Math.max(1, Math.min(window.innerWidth / VW, window.innerHeight / VH));
+  canvas.style.width = VW * scale + "px";
+  canvas.style.height = VH * scale + "px";
 }
+window.addEventListener("resize", resize);
+
+let titleT = 0;
+function loop() {
+  update();
+  if (game.scene === "win") drawWin();
+  else if (game.scene === "title") drawTitle();
+  else render();
+  requestAnimationFrame(loop);
+}
+
+function drawTitle() {
+  titleT++;
+  ctx.clearRect(0, 0, VW, VH);
+  ctx.drawImage(A.sky, 0, 0);
+  game.camX = (titleT * 0.3) % (WORLD_W - VW);
+  drawLayer(A.far, 0.18, VH - 150 - 12);
+  drawLayer(A.mid, 0.3, VH - 170 + 4);
+  drawLayer(A.near, 0.5, VH - 190 + 18);
+  ctx.drawImage(A.street, -game.camX, GROUND_Y);
+  const fx = facadeX - game.camX * 0.85;
+  ctx.drawImage(A.facade, Math.round(fx), GROUND_Y - 150);
+  ctx.drawImage(A.signHub, Math.round(fx + 110), GROUND_Y - 150 + 6);
+  const lc = lightBuf.ctx; lc.clearRect(0, 0, VW, VH);
+  glow(lc, fx + 140, GROUND_Y - 138, 50, "rgba(255,77,141,0.5)");
+  glow(lc, VW * 0.5, GROUND_Y - 30, 70, "rgba(52,231,255,0.14)");
+  ctx.globalCompositeOperation = "lighter"; ctx.drawImage(lightBuf.c, 0, 0); ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 0.5; drawLayer(A.fog, 0.15, 0); ctx.globalAlpha = 1;
+  vignette();
+}
+
+function drawWin() {
+  document.getElementById("hud").classList.add("hidden");
+  document.getElementById("interactPrompt").classList.remove("show");
+  document.getElementById("winScreen").classList.remove("hidden");
+}
+
+// ---- boot ----
+function boot() {
+  buildAssets();
+  spawnAmbientParticles();
+  updateHUD();
+  resize();
+  player.y = GROUND_Y - CFH;
+  ["btnLeft", "btnRight", "btnJump", "btnInteract"].forEach((id, i) =>
+    bindTouch(id, ["KeyA", "KeyD", "Space", "KeyE"][i]));
+  const sb = document.getElementById("startBtn");
+  if (sb) sb.addEventListener("click", startGame);
+  const mb = document.getElementById("muteBtn");
+  if (mb) mb.addEventListener("click", (e) => {
+    const m = e.target.classList.toggle("muted");
+    setMuted(m); e.target.textContent = m ? "♪ off" : "♪ on";
+  });
+  requestAnimationFrame(loop);
+}
+
+// expose a couple of hooks for headless QA screenshots
+window.__priva = { startGame, openPuzzle, closePuzzle, game, player };
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+else boot();

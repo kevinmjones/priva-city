@@ -1,25 +1,51 @@
 # Priva-city
 
-Priva-city is a browser prototype for a privacy-focused CTF adventure inspired by explorable security games, but with original privacy education, story, and procedural art.
+A **pixel-art side-scrolling privacy CTF** from OT Labs. Take down data brokers in a
+neon night city and restore consent, one district at a time.
 
-## Prototype
+> **v2 (OTL-75)** — art-pipeline pivot. The old top-down flat-vector renderer was
+> replaced with a custom canvas side-scroller fed by **procedurally-generated
+> raster pixel-art** (original art, generated deterministically — no external
+> assets), with parallax depth, additive night lighting, particles, an animated
+> walk-cycle character, and real interactive privacy quests.
 
-- Static HTML/CSS/JavaScript
-- Phaser 3 for the game loop, camera, movement, collision, and interaction zones
-- No backend; progress and timer live in browser memory for this prototype
+## Stack
 
-## Run Locally
+- Static HTML/CSS/JavaScript (ES modules) — **no game framework, no build step**
+- `src/art.js` — procedural pixel-art generator (sky, parallax skylines, building
+  facades, neon signs, street, lamps, animated character, kiosk, fog)
+- `src/game.js` — side-scroller engine: physics, camera, parallax, lighting, particles
+- `src/audio.js` — procedural WebAudio (SFX + ambient drone)
+- `src/quests.js` — privacy quest content + interactive puzzles
+- Deploys as static files to GitHub Pages
+
+## Run locally
 
 ```bash
-python3 -m http.server 8080
+npm run serve   # python3 -m http.server 8080
 ```
 
 Open `http://localhost:8080`.
 
-## Game Loop
+## Controls
 
-Move with `WASD` or arrow keys. Press `E` near citizens, terminals, and data shards. Complete three privacy challenges, collect four consent sigils, and enter the final vault code at the Privacy Trust Hub.
+- **Move** `A` / `D` or `←` / `→`
+- **Jump** `Space`
+- **Interact** `E`
+- Touch controls appear on mobile.
 
-## Deployment
+## Gameplay
 
-The repository is intended to deploy from the `main` branch root through GitHub Pages.
+Phase 0 vertical slice: walk the Data Broker District, reach the broker kiosk, and
+solve the **Consent Switchboard** — set each bundled permission to the
+privacy-respecting choice (data minimisation, just-in-time consent) to revoke the
+broker's data grab and earn a Consent Sigil.
+
+## Visual gate
+
+`docs/visual-audit/v2-sidebyside-vs-gridcity.png` — side-by-side against the board's
+Grid City reference. Regenerate screenshots with:
+
+```bash
+npm run capture
+```

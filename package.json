@@ -1,0 +1,29 @@
+{
+  "name": "priva-city",
+  "version": "2.0.0",
+  "description": "Priva-city: a pixel-art side-scrolling privacy CTF. Procedurally generated raster art, parallax night city, animated character, interactive privacy quests.",
+  "main": "index.html",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "capture": "node capture.mjs",
+    "test": "node capture.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kevinmjones/priva-city.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kevinmjones/priva-city/issues"
+  },
+  "homepage": "https://github.com/kevinmjones/priva-city#readme",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}
